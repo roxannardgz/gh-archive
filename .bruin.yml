@@ -3,5 +3,5 @@ environments:
     default:
         connections:
             duckdb:
-                - name: duckdb-default
-                  path: duckdb.db
+                - name: gharchive
+                  path: gharchive.duckdb
