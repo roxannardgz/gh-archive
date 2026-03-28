@@ -1,5 +1,5 @@
 /* @bruin
-name: mart_repo_event_type_daily
+name: mart_repo_daily_event_type_activity
 type: duckdb.sql
 materialization:
   type: table

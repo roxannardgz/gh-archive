@@ -1,5 +1,5 @@
 /* @bruin
-name: mart_actor_repo_activity
+name: mart_repo_actor_activity
 type: duckdb.sql
 materialization:
   type: table
