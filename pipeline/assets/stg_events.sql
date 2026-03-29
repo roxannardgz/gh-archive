@@ -6,6 +6,16 @@ depends:
 materialization:
   type: table
 
+checks:
+  - name: event_id
+    type: not_null
+  - name: event_type
+    type: not_null
+  - name: repo_name
+    type: not_null
+  - name: created_at
+    type: not_null
+    
 custom_checks:
   - name: no duplicate event ids
     description: stg_events should have unique event ids after deduplication
