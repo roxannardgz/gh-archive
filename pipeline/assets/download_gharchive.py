@@ -5,6 +5,7 @@ image: python:3.11
 
 from __future__ import annotations
 
+import gzip
 import os
 import subprocess
 import time
@@ -15,6 +16,11 @@ from pathlib import Path
 BASE_URL = "https://data.gharchive.org"
 RAW_DIR = Path("data/raw")
 RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+EXPECTED_DAYS = 7
+HOURS_PER_DAY = 24
+EXPECTED_FILES = EXPECTED_DAYS * HOURS_PER_DAY
+MIN_BYTES = 1_000_000  # 1 MB
 
 
 def parse_date(value: str) -> date:
@@ -37,7 +43,7 @@ def get_window_end() -> date:
 
 
 def get_window_start(window_end: date) -> date:
-    return window_end - timedelta(days=6)
+    return window_end - timedelta(days=EXPECTED_DAYS - 1)
 
 
 def daterange(start: date, end: date):
@@ -50,7 +56,7 @@ def daterange(start: date, end: date):
 def expected_filenames(start: date, end: date) -> set[str]:
     files: set[str] = set()
     for day in daterange(start, end):
-        for hour in range(24):
+        for hour in range(HOURS_PER_DAY):
             files.add(f"{day.isoformat()}-{hour}.json.gz")
     return files
 
@@ -74,7 +80,7 @@ def download_file(filename: str) -> None:
                 "--retry-all-errors",
                 "--retry-delay", "5",
                 "--connect-timeout", "20",
-                "--max-time", "150",
+                "--max-time", "300",
                 "-o", str(destination),
                 url,
             ],
@@ -91,6 +97,51 @@ def cleanup_raw_dir(keep_files: set[str]) -> None:
         if path.name not in keep_files:
             print(f"Removing old file {path.name}")
             path.unlink()
+
+
+def validate_gzip_file(path: Path) -> None:
+    try:
+        with gzip.open(path, "rb") as f:
+            # Read a small chunk to make sure decompression works
+            f.read(1024)
+    except Exception as exc:
+        raise RuntimeError(f"Invalid gzip file: {path.name}: {exc}") from exc
+
+
+def validate_files(keep_files: set[str]) -> None:
+    actual_files = sorted(RAW_DIR.glob("*.json.gz"))
+
+    if not actual_files:
+        raise RuntimeError(f"No .json.gz files found in {RAW_DIR}")
+
+    actual_names = {path.name for path in actual_files}
+    expected_count = len(keep_files)
+    actual_count = len(actual_files)
+
+    if actual_count < expected_count:
+        missing_files = sorted(keep_files - actual_names)
+        print(
+            f"WARNING: Expected {expected_count} files but found {actual_count}. "
+            f"Missing {len(missing_files)} files."
+        )
+        for missing in missing_files[:10]:
+            print(f"WARNING: Missing file: {missing}")
+        if len(missing_files) > 10:
+            print(f"WARNING: ... and {len(missing_files) - 10} more missing files.")
+
+    for path in actual_files:
+        size_bytes = path.stat().st_size
+        if size_bytes < MIN_BYTES:
+            raise RuntimeError(
+                f"File {path.name} is too small: {size_bytes} bytes "
+                f"(minimum expected {MIN_BYTES})"
+            )
+
+        validate_gzip_file(path)
+
+    print(
+        f"File validation completed. Found {actual_count} files in raw directory."
+    )
 
 
 def format_seconds(seconds: float) -> str:
@@ -118,6 +169,7 @@ def main() -> None:
         download_file(filename)
 
     cleanup_raw_dir(keep_files)
+    validate_files(keep_files)
 
     elapsed = time.time() - start_time
     print(
