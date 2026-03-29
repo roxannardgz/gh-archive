@@ -1,6 +1,8 @@
 /* @bruin
 name: stg_selected_events
 type: duckdb.sql
+depends:
+  - stg_events
 materialization:
   type: table
 @bruin */

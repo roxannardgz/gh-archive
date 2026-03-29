@@ -1,6 +1,8 @@
 /* @bruin
 name: raw_events
 type: duckdb.sql
+depends:
+  - download_gharchive
 materialization:
   type: table
 @bruin */

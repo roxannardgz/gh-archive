@@ -1,6 +1,8 @@
 /* @bruin
 name: mart_repo_daily_activity
 type: duckdb.sql
+depends:
+  - stg_selected_events
 materialization:
   type: table
 @bruin */
