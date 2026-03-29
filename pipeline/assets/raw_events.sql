@@ -11,5 +11,6 @@ SELECT *
 FROM read_ndjson(
     'data/raw/*.json.gz',
     sample_size = -1,
+    union_by_name = true,
     filename = true
 );
