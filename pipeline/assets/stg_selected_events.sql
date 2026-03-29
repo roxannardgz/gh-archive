@@ -5,6 +5,20 @@ depends:
   - stg_events
 materialization:
   type: table
+
+checks:
+  - name: event_id
+    type: not_null
+  - name: repo_name
+    type: not_null
+  - name: created_at
+    type: not_null
+
+custom_checks:
+  - name: row count greater than zero
+    description: stg_selected_events should not be empty
+    query: SELECT COUNT(*) > 0 FROM stg_selected_events
+    value: 1
 @bruin */
 
 SELECT *
