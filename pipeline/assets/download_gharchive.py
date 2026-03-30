@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import gzip
 import os
+import json
 import subprocess
 import time
 from datetime import date, datetime, timedelta
@@ -17,10 +18,25 @@ BASE_URL = "https://data.gharchive.org"
 RAW_DIR = Path("data/raw")
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-EXPECTED_DAYS = 7
 HOURS_PER_DAY = 24
-EXPECTED_FILES = EXPECTED_DAYS * HOURS_PER_DAY
 MIN_BYTES = 1_000_000  # 1 MB
+
+
+def get_lookback_days() -> int:
+    vars_json = os.environ.get("BRUIN_VARS", "{}")
+    vars_dict = json.loads(vars_json)
+
+    value = vars_dict.get("lookback_days", 7)
+
+    try:
+        days = int(value)
+    except ValueError as exc:
+        raise ValueError(f"Invalid lookback_days value: {value}") from exc
+
+    if days < 1:
+        raise ValueError(f"lookback_days must be at least 1, got {days}")
+
+    return days
 
 
 def parse_date(value: str) -> date:
@@ -42,8 +58,8 @@ def get_window_end() -> date:
     return date.today() - timedelta(days=1)
 
 
-def get_window_start(window_end: date) -> date:
-    return window_end - timedelta(days=EXPECTED_DAYS - 1)
+def get_window_start(window_end: date, lookback_days: int) -> date:
+    return window_end - timedelta(days=lookback_days - 1)
 
 
 def daterange(start: date, end: date):
@@ -158,10 +174,14 @@ def format_seconds(seconds: float) -> str:
 def main() -> None:
     start_time = time.time()
 
+    lookback_days = get_lookback_days()
     window_end = get_window_end()
-    window_start = get_window_start(window_end)
+    window_start = get_window_start(window_end, lookback_days)
 
-    print(f"Target window: {window_start} to {window_end}")
+    print(
+        f"Target window: {window_start} to {window_end} "
+        f"({lookback_days} day(s))"
+    )
 
     keep_files = expected_filenames(window_start, window_end)
 

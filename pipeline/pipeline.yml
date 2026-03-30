@@ -8,3 +8,8 @@ default_connections:
 
 default:
     type: duckdb.sql
+
+variables:
+    lookback_days:
+        type: integer
+        default: 7
