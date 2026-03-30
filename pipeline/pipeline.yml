@@ -10,6 +10,14 @@ default:
     type: duckdb.sql
 
 variables:
+    storage_mode:
+        type: string
+        default: "local"
+
     lookback_days:
         type: integer
         default: 7
+
+    cloud_start_date:
+        type: string
+        default: "2026-03-01"
