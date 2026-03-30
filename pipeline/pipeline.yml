@@ -1,8 +1,10 @@
 name: gharchive-daily
-schedule: daily
+schedule: "0 2 * * *"
 start_date: "2026-03-01"
 catchup: false
+
 default_connections:
     duckdb: "gharchive"
+
 default:
     type: duckdb.sql
