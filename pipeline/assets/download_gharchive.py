@@ -60,6 +60,13 @@ def get_lookback_days() -> int:
     return days
 
 
+def get_window_start_from_env() -> date | None:
+    bruin_start_date = os.environ.get("BRUIN_START_DATE")
+    if bruin_start_date:
+        return parse_date(bruin_start_date)
+    return None
+
+
 def get_window_bounds(storage_mode: str) -> tuple[date, date]:
     window_end = get_window_end()
 
@@ -67,6 +74,12 @@ def get_window_bounds(storage_mode: str) -> tuple[date, date]:
         lookback_days = get_lookback_days()
         window_start = get_window_start(window_end, lookback_days)
         return window_start, window_end
+
+    # cloud mode
+    window_start_from_env = get_window_start_from_env()
+
+    if window_start_from_env:
+        return window_start_from_env, window_end
 
     return window_end, window_end
 
