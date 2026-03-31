@@ -68,8 +68,7 @@ def get_window_bounds(storage_mode: str) -> tuple[date, date]:
         window_start = get_window_start(window_end, lookback_days)
         return window_start, window_end
 
-    cloud_start_date = get_cloud_start_date()
-    return cloud_start_date, window_end
+    return window_end, window_end
 
 
 def parse_date(value: str) -> date:
