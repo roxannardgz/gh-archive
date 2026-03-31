@@ -8,8 +8,7 @@ depends:
 DECLARE target_date DATE DEFAULT DATE('{{ end_date }}');
 
 CREATE TABLE IF NOT EXISTS `gharchive-491810.gharchive_dataset.raw_events`
-PARTITION BY DATE(created_at)
-CLUSTER BY type AS
+PARTITION BY DATE(created_at) AS
 SELECT *
 FROM `gharchive-491810.gharchive_dataset.ext_raw_events_cloud`
 WHERE FALSE;
