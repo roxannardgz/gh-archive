@@ -1,5 +1,5 @@
 """@bruin
-name: download_gharchive
+name: download_gharchive_local
 image: python:3.11
 @bruin"""
 
@@ -21,26 +21,6 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 HOURS_PER_DAY = 24
 MIN_BYTES = 1_000_000  # 1 MB
 
-def get_storage_mode() -> str:
-    vars_json = os.environ.get("BRUIN_VARS", "{}")
-    vars_dict = json.loads(vars_json)
-
-    value = str(vars_dict.get("storage_mode", "local")).strip().lower()
-
-    if value not in {"local", "cloud"}:
-        raise ValueError(
-            f"Invalid storage_mode: {value}. Expected 'local' or 'cloud'."
-        )
-
-    return value
-
-
-def get_cloud_start_date() -> date:
-    vars_json = os.environ.get("BRUIN_VARS", "{}")
-    vars_dict = json.loads(vars_json)
-
-    value = vars_dict.get("cloud_start_date", "2026-03-01")
-    return parse_date(str(value))
 
 
 def get_lookback_days() -> int:
@@ -58,30 +38,6 @@ def get_lookback_days() -> int:
         raise ValueError(f"lookback_days must be at least 1, got {days}")
 
     return days
-
-
-def get_window_start_from_env() -> date | None:
-    bruin_start_date = os.environ.get("BRUIN_START_DATE")
-    if bruin_start_date:
-        return parse_date(bruin_start_date)
-    return None
-
-
-def get_window_bounds(storage_mode: str) -> tuple[date, date]:
-    window_end = get_window_end()
-
-    if storage_mode == "local":
-        lookback_days = get_lookback_days()
-        window_start = get_window_start(window_end, lookback_days)
-        return window_start, window_end
-
-    # cloud mode
-    window_start_from_env = get_window_start_from_env()
-
-    if window_start_from_env:
-        return window_start_from_env, window_end
-
-    return window_end, window_end
 
 
 def parse_date(value: str) -> date:
@@ -105,13 +61,6 @@ def get_window_end() -> date:
 
 def get_window_start(window_end: date, lookback_days: int) -> date:
     return window_end - timedelta(days=lookback_days - 1)
-
-
-def daterange(start: date, end: date):
-    current = start
-    while current <= end:
-        yield current
-        current += timedelta(days=1)
 
 
 def expected_filenames(start: date, end: date) -> set[str]:
@@ -215,6 +164,7 @@ def format_seconds(seconds: float) -> str:
         return f"{minutes}m {secs}s"
     return f"{secs}s"
 
+
 def run_local_mode(window_start: date, window_end: date) -> None:
     keep_files = expected_filenames(window_start, window_end)
 
@@ -224,66 +174,27 @@ def run_local_mode(window_start: date, window_end: date) -> None:
     cleanup_raw_dir(keep_files)
     validate_files(keep_files)
 
-def export_day_to_gcs(day: date) -> None:
-    gcs_uri = build_gcs_uri_for_day(day)
 
-    query = f"""
-    EXPORT DATA OPTIONS(
-        uri='{gcs_uri}',
-        format='PARQUET',
-        overwrite=true
-    ) AS
-    SELECT *
-    FROM `githubarchive.day.{day.strftime("%Y%m%d")}`
-    """
-
-    print(f"Exporting {day} to {gcs_uri}")
-
-    subprocess.run(
-        ["bq", "query", "--use_legacy_sql=false", "--location=US", query],
-        check=True,
-    )
-    
-    
-def run_cloud_mode(window_start: date, window_end: date) -> None:
-    for day in daterange(window_start, window_end):
-        export_day_to_gcs(day)
-
-
-def build_gcs_uri_for_day(day: date) -> str:
-    return (
-        f"gs://gharchive-491810-bucket/"
-        f"raw/year={day.year}/month={day.month:02d}/day={day.day:02d}/"
-        f"part-*.parquet"
-    )
-
-def get_bucket_name() -> str:
-    return "gharchive-491810-bucket"
-
+def daterange(start: date, end: date):
+    current = start
+    while current <= end:
+        yield current
+        current += timedelta(days=1)
+        
 
 def main() -> None:
     start_time = time.time()
 
-    storage_mode = get_storage_mode()
-    window_start, window_end = get_window_bounds(storage_mode)
+    window_end = get_window_end()
+    lookback_days = get_lookback_days()
+    window_start = get_window_start(window_end, lookback_days)
 
-    if storage_mode == "local":
-        lookback_days = get_lookback_days()
-        print(
-            f"Storage mode: {storage_mode}. "
-            f"Target window: {window_start} to {window_end} "
-            f"({lookback_days} day(s))"
-        )
-    else:
-        print(
-            f"Storage mode: {storage_mode}. "
-            f"Target window: {window_start} to {window_end}"
-        )
+    print(
+        f"Local mode. Target window: {window_start} to {window_end} "
+        f"({lookback_days} day(s))"
+    )
 
-    if storage_mode == "local":
-        run_local_mode(window_start, window_end)
-    else:
-        run_cloud_mode(window_start, window_end)
+    run_local_mode(window_start, window_end)
 
     elapsed = time.time() - start_time
     print(f"Done. Total runtime: {format_seconds(elapsed)}")
