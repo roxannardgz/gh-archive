@@ -4,6 +4,8 @@ from typing import Literal, Optional
 
 import pandas as pd
 import streamlit as st
+from datetime import timedelta
+
 
 try:
     import duckdb
@@ -26,6 +28,7 @@ BQ_DATASET = os.getenv("BQ_DATASET", "gharchive_dataset")
 LOOKBACK_DAYS = 7
 
 LOCAL_TABLES = {
+    "stg_events": "stg_events",
     "stg_selected_events": "stg_selected_events",
     "mart_repo_daily_activity": "mart_repo_daily_activity",
     "mart_repo_daily_event_type_activity": "mart_repo_daily_event_type_activity",
@@ -34,6 +37,7 @@ LOCAL_TABLES = {
 }
 
 CLOUD_TABLES = {
+    "stg_events": f"`{BQ_PROJECT}.{BQ_DATASET}.stg_events`",
     "stg_selected_events": f"`{BQ_PROJECT}.{BQ_DATASET}.stg_selected_events`",
     "mart_repo_daily_activity": f"`{BQ_PROJECT}.{BQ_DATASET}.mart_repo_daily_activity`",
     "mart_repo_daily_event_type_activity": f"`{BQ_PROJECT}.{BQ_DATASET}.mart_repo_daily_event_type_activity`",
@@ -202,6 +206,7 @@ def get_top_repos(backend: DataBackend) -> pd.DataFrame:
 st.set_page_config(page_title="GH Archive Activity", layout="wide")
 st.title("GH Archive Activity")
 
+
 with st.sidebar:
     st.header("Controls")
     source: DataSource = st.radio("Data source", ["Local", "Cloud"], index=1)
@@ -214,14 +219,31 @@ except Exception as e:
     st.error(f"Could not load repo options from {source} source: {e}")
     st.stop()
 
-col_a, col_b, col_c = st.columns([2, 2, 2])
-with col_a:
+last_loaded = None
+try:
+    last_loaded = get_last_loaded_date(backend)
+except Exception as e:
+    st.error(f"Could not load last loaded date: {e}")
+
+start_date = None
+end_date = last_loaded
+
+if last_loaded is not None:
+    start_date = last_loaded - timedelta(days=LOOKBACK_DAYS - 1)
+
+top_left, top_right = st.columns([2, 1])
+
+with top_left:
     selected_repo = st.selectbox("Repo", repo_options, index=0)
-with col_b:
-    activity_metric = st.radio("Activity metric", ["Total events", "Unique actors"], horizontal=True)
-with col_c:
-    st.markdown("**Window**")
-    st.caption(f"Last {LOOKBACK_DAYS} days")
+
+with top_right:
+    st.markdown("**Now Showing**")
+
+    if start_date is not None and end_date is not None:
+        st.caption(
+            f"{start_date.strftime('%b %d')} → {end_date.strftime('%b %d')}"
+        )
+
     if selected_repo == "All repos":
         try:
             active_repos = get_active_repo_count(backend)
@@ -229,12 +251,8 @@ with col_c:
         except Exception:
             pass
 
-try:
-    last_loaded = get_last_loaded_date(backend)
-    if last_loaded is not None:
-        st.caption(f"Data through: {last_loaded}")
-except Exception:
-    pass
+st.divider()
+
 
 repo_filter = None if selected_repo == "All repos" else selected_repo
 
@@ -252,8 +270,16 @@ k1.metric("Total events", f"{kpis['total_events']:,}")
 k2.metric("Total contributors", f"{kpis['total_contributors']:,}")
 k3.metric("Avg events per day", f"{kpis['avg_events_per_day']:.1f}")
 
+
 # Activity over time
 st.subheader("Activity over time")
+
+activity_metric = st.radio(
+    "Activity metric",
+    ["Total events", "Unique actors"],
+    horizontal=True
+)
+
 if activity_df.empty:
     st.info("No activity data available for the selected view.")
 else:
