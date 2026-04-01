@@ -2,7 +2,7 @@
 name: raw_events
 type: duckdb.sql
 depends:
-  - download_gharchive
+  - download_gharchive_local
 materialization:
   type: table
 

@@ -5,6 +5,7 @@ catchup: false
 
 default_connections:
     duckdb: "gharchive"
+    google_cloud_platform: "gharchive_bq"
 
 default:
     type: duckdb.sql
@@ -20,4 +21,4 @@ variables:
 
     cloud_start_date:
         type: string
-        default: "2026-03-01"
+        default: "2026-03-23"
