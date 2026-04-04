@@ -5,7 +5,6 @@ from typing import Literal, Optional
 import pandas as pd
 import streamlit as st
 from datetime import timedelta
-import plotly.express as px
 import altair as alt
 
 try:
@@ -27,6 +26,7 @@ LOCAL_DUCKDB_PATH = "gharchive.duckdb"
 BQ_PROJECT = os.getenv("BQ_PROJECT", "gharchive-491810")
 BQ_DATASET = os.getenv("BQ_DATASET", "gharchive_dataset")
 LOOKBACK_DAYS = 7
+BAR_COLOR = "#4078c0"
 
 LOCAL_TABLES = {
     "stg_events": "stg_events",
@@ -317,7 +317,7 @@ with title_col:
 with toggle_col:
     activity_metric = st.radio(
         "Activity metric",
-        ["Total events", "Unique actors"],
+        ["Total events", "Unique contributors"],
         horizontal=True,
         label_visibility="collapsed"
     )
@@ -346,83 +346,144 @@ else:
     chart_df[chart_col] = chart_df[chart_col].fillna(0).astype(int)
     chart_df["event_date_label"] = pd.to_datetime(chart_df["event_date"]).dt.strftime("%b %d")
 
-    activity_chart = (
-        alt.Chart(chart_df)
-        .mark_bar()
-        .encode(
-            x=alt.X(
-                "event_date_label:N",
-                sort=chart_df["event_date_label"].tolist(),
-                title=None,
-                axis=alt.Axis(labelAngle=0)
-            ),
-            y=alt.Y(f"{chart_col}:Q", title=activity_metric),
-            tooltip=[
-                alt.Tooltip("event_date_label:N", title="Date"),
-                alt.Tooltip(f"{chart_col}:Q", title=activity_metric)
-            ]
-        )
-        .properties(height=300)
+    base = alt.Chart(chart_df)
+
+    bars = base.mark_bar(color=BAR_COLOR).encode(
+        x=alt.X(
+            "event_date_label:N",
+            sort=chart_df["event_date_label"].tolist(),
+            title=None,
+            axis=alt.Axis(labelAngle=0)
+        ),
+        y=alt.Y(f"{chart_col}:Q", title=activity_metric),
+        tooltip=[
+            alt.Tooltip("event_date_label:N", title="Date"),
+            alt.Tooltip(f"{chart_col}:Q", title=activity_metric)
+        ]
     )
+
+    text = base.mark_text(
+        dy=-5,
+        color=BAR_COLOR,
+        fontWeight="bold"
+    ).encode(
+        x=alt.X(
+            "event_date_label:N",
+            sort=chart_df["event_date_label"].tolist()
+        ),
+        y=alt.Y(f"{chart_col}:Q"),
+        text=alt.Text(f"{chart_col}:Q", format=",.0f")
+    )
+
+    activity_chart = (bars + text).properties(height=300)
 
     st.altair_chart(activity_chart, use_container_width=True)
 
 
+
+# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+bottom_left, spacer, bottom_right = st.columns([2, 0.2, 1])
+
 # Event type distribution -- -- -- -- -- -- -- --
-st.subheader("Event type distribution")
+with bottom_left:
+    st.subheader("Event type distribution")
 
-if event_types_df.empty:
-    st.info("No event type data available for the selected view.")
-else:
-    event_types_df = event_types_df.sort_values(
-        ["total_events", "event_type"],
-        ascending=[False, True]
-    )
-
-    event_type_chart = (
-        alt.Chart(event_types_df)
-        .mark_bar()
-        .encode(
-            x=alt.X("event_type:N", sort=event_types_df["event_type"].tolist(), title=None),
-            y=alt.Y("total_events:Q", title="Total events")
-        )
-        .properties(height=300)
-    )
-
-    st.altair_chart(event_type_chart, use_container_width=True)
-
-
-# Top 5 - repo or actor depending on scope -- -- -- -- -- -- -- --
-if selected_repo == "All repos":
-    st.subheader("Top repos")
-else:
-    st.subheader("Top contributors")
-
-try:
-    top_entities_df = get_top_entities(backend, repo_filter, start_date, end_date)
-
-    if top_entities_df.empty:
-        st.info("No data available for this view.")
+    if event_types_df.empty:
+        st.info("No event type data available for the selected view.")
     else:
-        top_entities_df = top_entities_df.sort_values(
-            ["total_events", "entity_name"],
+        event_types_df = event_types_df.sort_values(
+            ["total_events", "event_type"],
             ascending=[False, True]
         )
 
-        top_entities_chart = (
-            alt.Chart(top_entities_df)
-            .mark_bar()
-            .encode(
-                x=alt.X("total_events:Q", title="Total events"),
-                y=alt.Y("entity_name:N", sort="-x", title=None)
-            )
-            .properties(height=250)
+        base = alt.Chart(event_types_df)
+
+        bars = base.mark_bar(color=BAR_COLOR).encode(
+            x=alt.X(
+                "event_type:N",
+                sort=event_types_df["event_type"].tolist(),
+                title=None
+            ),
+            y=alt.Y("total_events:Q", title="Total events"),
+            tooltip=[
+                alt.Tooltip("event_type:N", title="Event type"),
+                alt.Tooltip("total_events:Q", title="Total events", format=",.0f")
+            ]
         )
 
-        st.altair_chart(top_entities_chart, use_container_width=True)
+        text = base.mark_text(
+            dy=-5,
+            color=BAR_COLOR,
+            fontWeight="bold"
+        ).encode(
+            x=alt.X(
+                "event_type:N",
+                sort=event_types_df["event_type"].tolist()
+            ),
+            y=alt.Y("total_events:Q"),
+            text=alt.Text("total_events:Q", format=",.0f")
+        )
 
-except Exception as e:
+        event_type_chart = (bars + text).properties(height=400)
+
+        st.altair_chart(event_type_chart, use_container_width=True)
+
+
+with spacer:
+    st.empty()
+
+# Top 5 - repo or actor depending on scope -- -- -- -- -- -- -- --
+with bottom_right:
     if selected_repo == "All repos":
-        st.error(f"Could not load top repos: {e}")
+        st.subheader("Top repos")
     else:
-        st.error(f"Could not load top contributors: {e}")
+        st.subheader("Top contributors")
+
+    try:
+        top_entities_df = get_top_entities(backend, repo_filter, start_date, end_date)
+
+        if top_entities_df.empty:
+            st.info("No data available for this view.")
+        else:
+            top_entities_df = top_entities_df.sort_values(
+                ["total_events", "entity_name"],
+                ascending=[False, True]
+            )
+
+            top_entities_df = top_entities_df.copy()
+
+            if selected_repo == "All repos":
+                top_entities_df["entity_label"] = top_entities_df["entity_name"].str.split("/", n=1).str[-1]
+            else:
+                top_entities_df["entity_label"] = top_entities_df["entity_name"]
+
+            base = alt.Chart(top_entities_df)
+
+            bars = base.mark_bar(color=BAR_COLOR).encode(
+                x=alt.X("total_events:Q", title="Total events"),
+                y=alt.Y("entity_label:N", sort="-x", title=None),
+                tooltip=[
+                    alt.Tooltip("entity_name:N", title="Full name"),
+                    alt.Tooltip("total_events:Q", title="Total events", format=",.0f")
+                ]
+            )
+
+            text = base.mark_text(
+                align="right",
+                dx=-5,
+                fontWeight="bold"
+            ).encode(
+                x=alt.X("total_events:Q"),
+                y=alt.Y("entity_label:N", sort="-x"),
+                text=alt.Text("total_events:Q", format=",.0f")
+            )
+
+            top_entities_chart = (bars + text).properties(height=400)
+
+            st.altair_chart(top_entities_chart, use_container_width=True)
+
+    except Exception as e:
+        if selected_repo == "All repos":
+            st.error(f"Could not load top repos: {e}")
+        else:
+            st.error(f"Could not load top contributors: {e}")
