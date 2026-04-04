@@ -299,7 +299,9 @@ except Exception as e:
     st.error(f"Could not load dashboard data: {e}")
     st.stop()
 
-# KPI row
+
+
+# KPI row -- -- -- -- -- -- -- --
 k1, k2, k3 = st.columns(3)
 k1.metric("Total events", f"{kpis['total_events']:,}")
 k2.metric("Total contributors", f"{kpis['total_contributors']:,}")
@@ -307,7 +309,6 @@ k3.metric("Avg events per day", f"{kpis['avg_events_per_day']:.1f}")
 
 
 # Activity over time -- -- -- -- -- -- -- --
-# Activity over time
 title_col, toggle_col = st.columns([3, 2])
 
 with title_col:
@@ -343,10 +344,28 @@ else:
     )
 
     chart_df[chart_col] = chart_df[chart_col].fillna(0).astype(int)
-    chart_df["event_date"] = chart_df["event_date"].astype(str)
-    chart_df = chart_df.set_index("event_date")
+    chart_df["event_date_label"] = pd.to_datetime(chart_df["event_date"]).dt.strftime("%b %d")
 
-    st.bar_chart(chart_df[[chart_col]])
+    activity_chart = (
+        alt.Chart(chart_df)
+        .mark_bar()
+        .encode(
+            x=alt.X(
+                "event_date_label:N",
+                sort=chart_df["event_date_label"].tolist(),
+                title=None,
+                axis=alt.Axis(labelAngle=0)
+            ),
+            y=alt.Y(f"{chart_col}:Q", title=activity_metric),
+            tooltip=[
+                alt.Tooltip("event_date_label:N", title="Date"),
+                alt.Tooltip(f"{chart_col}:Q", title=activity_metric)
+            ]
+        )
+        .properties(height=300)
+    )
+
+    st.altair_chart(activity_chart, use_container_width=True)
 
 
 # Event type distribution -- -- -- -- -- -- -- --
