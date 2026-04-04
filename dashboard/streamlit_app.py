@@ -5,7 +5,8 @@ from typing import Literal, Optional
 import pandas as pd
 import streamlit as st
 from datetime import timedelta
-
+import plotly.express as px
+import altair as alt
 
 try:
     import duckdb
@@ -84,16 +85,49 @@ def repo_filter_clause(repo: Optional[str]) -> str:
     return f" AND repo_name = '{quote_sql(repo)}'"
 
 
-def date_filter_stg(source: DataSource) -> str:
-    if source == "Local":
-        return f"created_at >= CURRENT_DATE - INTERVAL '{LOOKBACK_DAYS - 1} days'"
-    return f"DATE(created_at) >= DATE_SUB(CURRENT_DATE(), INTERVAL {LOOKBACK_DAYS - 1} DAY)"
+def sql_date(value) -> str:
+    return f"DATE '{pd.to_datetime(value).date()}'"
 
 
-def date_filter_event_date(source: DataSource) -> str:
-    if source == "Local":
-        return f"event_date >= CURRENT_DATE - INTERVAL '{LOOKBACK_DAYS - 1} days'"
-    return f"event_date >= DATE_SUB(CURRENT_DATE(), INTERVAL {LOOKBACK_DAYS - 1} DAY)"
+def created_at_range_clause(start_date, end_date) -> str:
+    return (
+        f"DATE(created_at) BETWEEN {sql_date(start_date)} "
+        f"AND {sql_date(end_date)}"
+    )
+
+
+def event_date_range_clause(start_date, end_date) -> str:
+    return (
+        f"event_date BETWEEN {sql_date(start_date)} "
+        f"AND {sql_date(end_date)}"
+    )
+
+def get_top_entities(backend: DataBackend, repo: Optional[str], start_date, end_date) -> pd.DataFrame:
+    if not repo:
+        t = backend.tables["mart_repo_summary"]
+        sql = f"""
+        SELECT
+            repo_name AS entity_name,
+            total_events
+        FROM {t}
+        ORDER BY total_events DESC, repo_name
+        LIMIT 5
+        """
+        return backend.run_query(sql)
+
+    t = backend.tables["stg_selected_events"]
+    sql = f"""
+    SELECT
+        actor_login AS entity_name,
+        COUNT(*) AS total_events
+    FROM {t}
+    WHERE {created_at_range_clause(start_date, end_date)}
+      AND repo_name = '{quote_sql(repo)}'
+    GROUP BY actor_login
+    ORDER BY total_events DESC, actor_login
+    LIMIT 5
+    """
+    return backend.run_query(sql)
 
 
 # ---------- Query builders ----------
@@ -111,17 +145,17 @@ def get_last_loaded_date(backend: DataBackend) -> Optional[pd.Timestamp]:
     return df.iloc[0]["max_date"] if not df.empty else None
 
 
-def get_active_repo_count(backend: DataBackend) -> int:
+def get_active_repo_count(backend: DataBackend, start_date, end_date) -> int:
     t = backend.tables["stg_selected_events"]
     sql = f"""
     SELECT COUNT(DISTINCT repo_name) AS active_repos
     FROM {t}
-    WHERE {date_filter_stg(backend.source)}
+    WHERE {created_at_range_clause(start_date, end_date)}
     """
     return int(backend.run_query(sql).iloc[0]["active_repos"])
 
 
-def get_kpis(backend: DataBackend, repo: Optional[str]) -> dict:
+def get_kpis(backend: DataBackend, repo: Optional[str], start_date, end_date) -> dict:
     t = backend.tables["stg_selected_events"]
     repo_clause = repo_filter_clause(repo)
     sql = f"""
@@ -130,7 +164,7 @@ def get_kpis(backend: DataBackend, repo: Optional[str]) -> dict:
         COUNT(DISTINCT actor_login) AS total_contributors,
         COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT DATE(created_at)), 0) AS avg_events_per_day
     FROM {t}
-    WHERE {date_filter_stg(backend.source)}
+    WHERE {created_at_range_clause(start_date, end_date)}
     {repo_clause}
     """
     row = backend.run_query(sql).iloc[0]
@@ -141,23 +175,24 @@ def get_kpis(backend: DataBackend, repo: Optional[str]) -> dict:
     }
 
 
-def get_activity_over_time(backend: DataBackend, repo: Optional[str]) -> pd.DataFrame:
-    t = backend.tables["mart_repo_daily_activity"]
+def get_activity_over_time(backend: DataBackend, repo: Optional[str], start_date, end_date) -> pd.DataFrame:
+    t = backend.tables["stg_selected_events"]
     repo_clause = repo_filter_clause(repo)
     sql = f"""
     SELECT
-        event_date,
-        total_events,
-        unique_actors
+        DATE(created_at) AS event_date,
+        COUNT(*) AS total_events,
+        COUNT(DISTINCT actor_login) AS unique_actors
     FROM {t}
-    WHERE {date_filter_event_date(backend.source)}
+    WHERE {created_at_range_clause(start_date, end_date)}
     {repo_clause}
+    GROUP BY DATE(created_at)
     ORDER BY event_date
     """
     return backend.run_query(sql)
 
 
-def get_event_type_distribution(backend: DataBackend, repo: Optional[str]) -> pd.DataFrame:
+def get_event_type_distribution(backend: DataBackend, repo: Optional[str], start_date, end_date) -> pd.DataFrame:
     t = backend.tables["mart_repo_daily_event_type_activity"]
     repo_clause = repo_filter_clause(repo)
     sql = f"""
@@ -165,10 +200,10 @@ def get_event_type_distribution(backend: DataBackend, repo: Optional[str]) -> pd
         event_type,
         SUM(total_events) AS total_events
     FROM {t}
-    WHERE {date_filter_event_date(backend.source)}
+    WHERE {event_date_range_clause(start_date, end_date)}
     {repo_clause}
     GROUP BY event_type
-    ORDER BY total_events DESC
+    ORDER BY total_events DESC, event_type
     """
     return backend.run_query(sql)
 
@@ -246,7 +281,7 @@ with top_right:
 
     if selected_repo == "All repos":
         try:
-            active_repos = get_active_repo_count(backend)
+            active_repos = get_active_repo_count(backend, start_date, end_date)
             st.caption(f"Active repos: {active_repos}")
         except Exception:
             pass
@@ -257,9 +292,9 @@ st.divider()
 repo_filter = None if selected_repo == "All repos" else selected_repo
 
 try:
-    kpis = get_kpis(backend, repo_filter)
-    activity_df = get_activity_over_time(backend, repo_filter)
-    event_types_df = get_event_type_distribution(backend, repo_filter)
+    kpis = get_kpis(backend, repo_filter, start_date, end_date)
+    activity_df = get_activity_over_time(backend, repo_filter, start_date, end_date)
+    event_types_df = get_event_type_distribution(backend, repo_filter, start_date, end_date)
 except Exception as e:
     st.error(f"Could not load dashboard data: {e}")
     st.stop()
@@ -271,48 +306,104 @@ k2.metric("Total contributors", f"{kpis['total_contributors']:,}")
 k3.metric("Avg events per day", f"{kpis['avg_events_per_day']:.1f}")
 
 
+# Activity over time -- -- -- -- -- -- -- --
 # Activity over time
-st.subheader("Activity over time")
+title_col, toggle_col = st.columns([3, 2])
 
-activity_metric = st.radio(
-    "Activity metric",
-    ["Total events", "Unique actors"],
-    horizontal=True
-)
+with title_col:
+    st.subheader("Activity over time")
+
+with toggle_col:
+    activity_metric = st.radio(
+        "Activity metric",
+        ["Total events", "Unique actors"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
 
 if activity_df.empty:
     st.info("No activity data available for the selected view.")
 else:
     chart_col = "total_events" if activity_metric == "Total events" else "unique_actors"
-    chart_df = activity_df.set_index("event_date")[[chart_col]]
-    st.bar_chart(chart_df)
 
-# Event type distribution
+    activity_df = activity_df.copy()
+    activity_df["event_date"] = pd.to_datetime(activity_df["event_date"]).dt.date
+
+    if start_date is not None and end_date is not None:
+        full_dates = pd.date_range(start=start_date, end=end_date, freq="D").date
+    else:
+        full_dates = sorted(activity_df["event_date"].unique())
+
+    full_df = pd.DataFrame({"event_date": list(full_dates)})
+
+    chart_df = full_df.merge(
+        activity_df[["event_date", chart_col]],
+        on="event_date",
+        how="left"
+    )
+
+    chart_df[chart_col] = chart_df[chart_col].fillna(0).astype(int)
+    chart_df["event_date"] = chart_df["event_date"].astype(str)
+    chart_df = chart_df.set_index("event_date")
+
+    st.bar_chart(chart_df[[chart_col]])
+
+
+# Event type distribution -- -- -- -- -- -- -- --
 st.subheader("Event type distribution")
+
 if event_types_df.empty:
     st.info("No event type data available for the selected view.")
 else:
-    event_types_df = event_types_df.sort_values("total_events", ascending=True).set_index("event_type")
-    st.bar_chart(event_types_df)
+    event_types_df = event_types_df.sort_values(
+        ["total_events", "event_type"],
+        ascending=[False, True]
+    )
 
-# Bottom section switches by scope
+    event_type_chart = (
+        alt.Chart(event_types_df)
+        .mark_bar()
+        .encode(
+            x=alt.X("event_type:N", sort=event_types_df["event_type"].tolist(), title=None),
+            y=alt.Y("total_events:Q", title="Total events")
+        )
+        .properties(height=300)
+    )
+
+    st.altair_chart(event_type_chart, use_container_width=True)
+
+
+# Top 5 - repo or actor depending on scope -- -- -- -- -- -- -- --
 if selected_repo == "All repos":
     st.subheader("Top repos")
-    try:
-        top_repos_df = get_top_repos(backend)
-        if top_repos_df.empty:
-            st.info("No repo summary data available.")
-        else:
-            st.bar_chart(top_repos_df.set_index("repo_name")[["total_events"]])
-    except Exception as e:
-        st.error(f"Could not load top repos: {e}")
 else:
     st.subheader("Top contributors")
-    try:
-        contributors_df = get_top_contributors(backend, selected_repo)
-        if contributors_df.empty:
-            st.info("No contributor data available for this repo.")
-        else:
-            st.dataframe(contributors_df, use_container_width=True)
-    except Exception as e:
+
+try:
+    top_entities_df = get_top_entities(backend, repo_filter, start_date, end_date)
+
+    if top_entities_df.empty:
+        st.info("No data available for this view.")
+    else:
+        top_entities_df = top_entities_df.sort_values(
+            ["total_events", "entity_name"],
+            ascending=[False, True]
+        )
+
+        top_entities_chart = (
+            alt.Chart(top_entities_df)
+            .mark_bar()
+            .encode(
+                x=alt.X("total_events:Q", title="Total events"),
+                y=alt.Y("entity_name:N", sort="-x", title=None)
+            )
+            .properties(height=250)
+        )
+
+        st.altair_chart(top_entities_chart, use_container_width=True)
+
+except Exception as e:
+    if selected_repo == "All repos":
+        st.error(f"Could not load top repos: {e}")
+    else:
         st.error(f"Could not load top contributors: {e}")
