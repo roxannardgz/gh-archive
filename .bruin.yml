@@ -3,5 +3,11 @@ environments:
     default:
         connections:
             duckdb:
-                - name: gharchive
-                  path: gharchive.duckdb
+                - name: "gharchive"
+                  path: "gharchive.duckdb"
+
+            google_cloud_platform:
+                - name: "gharchive_bq"
+                  project_id: "gharchive-491810"
+                  location: "US"
+                  use_application_default_credentials: true

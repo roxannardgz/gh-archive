@@ -13,7 +13,7 @@ default:
 variables:
     storage_mode:
         type: string
-        default: "local"
+        default: "cloud"
 
     lookback_days:
         type: integer
