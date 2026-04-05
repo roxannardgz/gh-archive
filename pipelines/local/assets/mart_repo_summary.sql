@@ -6,9 +6,10 @@ depends:
 materialization:
   type: table
 
-checks:
+columns:
   - name: repo_name
-    type: not_null
+    checks:
+      - name: not_null
 
 custom_checks:
   - name: row count greater than zero

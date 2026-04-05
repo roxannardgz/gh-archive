@@ -4,15 +4,22 @@ type: bq.sql
 depends:
   - raw_events_cloud
 
-checks:
+columns:
   - name: event_id
-    type: not_null
+    checks:
+      - name: not_null
+  - name: actor_id
+    checks:
+      - name: not_null
   - name: event_type
-    type: not_null
+    checks:
+      - name: not_null
   - name: repo_name
-    type: not_null
+    checks:
+      - name: not_null
   - name: created_at
-    type: not_null
+    checks:
+      - name: not_null
 
 custom_checks:
   - name: no duplicate event ids for target date

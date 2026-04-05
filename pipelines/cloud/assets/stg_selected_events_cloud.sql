@@ -4,12 +4,22 @@ type: bq.sql
 depends:
   - stg_events_cloud
 
-checks:
+columns:
   - name: event_id
-    type: not_null
+    checks:
+      - name: not_null
+  - name: actor_id
+    checks:
+      - name: not_null
+  - name: event_type
+    checks:
+      - name: not_null
   - name: repo_name
-    type: not_null
+    checks:
+      - name: not_null
   - name: created_at
+    checks:
+      - name: not_null
     type: not_null
 
 custom_checks:

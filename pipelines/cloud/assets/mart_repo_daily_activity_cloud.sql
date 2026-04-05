@@ -4,11 +4,13 @@ type: bq.sql
 depends:
   - stg_selected_events_cloud
 
-checks:
+columns:
   - name: repo_name
-    type: not_null
+    checks:
+      - name: not_null
   - name: event_date
-    type: not_null
+    checks:
+      - name: not_null
 
 custom_checks:
   - name: row count greater than zero for loaded range
