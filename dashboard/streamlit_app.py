@@ -243,7 +243,6 @@ st.title("GH Archive Activity")
 
 
 with st.sidebar:
-    st.header("Controls")
     source: DataSource = st.radio("Data source", ["Local", "Cloud"], index=1)
 
 backend = DataBackend(source=source)
@@ -266,27 +265,28 @@ end_date = last_loaded
 if last_loaded is not None:
     start_date = last_loaded - timedelta(days=LOOKBACK_DAYS - 1)
 
-top_left, top_right = st.columns([2, 1])
+active_repos = None
+if start_date is not None and end_date is not None:
+    try:
+        active_repos = get_active_repo_count(backend, start_date, end_date)
+    except Exception:
+        pass
 
-with top_left:
-    selected_repo = st.selectbox("Repo", repo_options, index=0)
 
-with top_right:
+with st.sidebar:
+    st.divider()
     st.markdown("**Now Showing**")
 
     if start_date is not None and end_date is not None:
-        st.caption(
-            f"{start_date.strftime('%b %d')} → {end_date.strftime('%b %d')}"
-        )
+        st.caption(f"{start_date.strftime('%b %d')} → {end_date.strftime('%b %d')}")
 
-    if selected_repo == "All repos":
-        try:
-            active_repos = get_active_repo_count(backend, start_date, end_date)
-            st.caption(f"Active repos: {active_repos}")
-        except Exception:
-            pass
+    if active_repos is not None:
+        st.caption(f"Active repos: {active_repos}")
 
-st.divider()
+    st.divider()
+
+    selected_repo = st.selectbox("Repo", repo_options, index=0)
+
 
 
 repo_filter = None if selected_repo == "All repos" else selected_repo
@@ -306,6 +306,9 @@ k1, k2, k3 = st.columns(3)
 k1.metric("Total events", f"{kpis['total_events']:,}")
 k2.metric("Total contributors", f"{kpis['total_contributors']:,}")
 k3.metric("Avg events per day", f"{kpis['avg_events_per_day']:.1f}")
+
+
+st.divider()
 
 
 # Activity over time -- -- -- -- -- -- -- --
@@ -355,7 +358,7 @@ else:
             title=None,
             axis=alt.Axis(labelAngle=0)
         ),
-        y=alt.Y(f"{chart_col}:Q", title=activity_metric),
+        y=alt.Y(f"{chart_col}:Q", title=activity_metric, axis=alt.Axis(grid=False)),
         tooltip=[
             alt.Tooltip("event_date_label:N", title="Date"),
             alt.Tooltip(f"{chart_col}:Q", title=activity_metric)
@@ -363,9 +366,10 @@ else:
     )
 
     text = base.mark_text(
-        dy=-5,
+        dy=-7,
         color=BAR_COLOR,
-        fontWeight="bold"
+        #fontWeight="bold",
+        fontSize=14
     ).encode(
         x=alt.X(
             "event_date_label:N",
@@ -404,7 +408,7 @@ with bottom_left:
                 sort=event_types_df["event_type"].tolist(),
                 title=None
             ),
-            y=alt.Y("total_events:Q", title="Total events"),
+            y=alt.Y("total_events:Q", title="Total events", axis=alt.Axis(grid=False)),
             tooltip=[
                 alt.Tooltip("event_type:N", title="Event type"),
                 alt.Tooltip("total_events:Q", title="Total events", format=",.0f")
@@ -412,9 +416,10 @@ with bottom_left:
         )
 
         text = base.mark_text(
-            dy=-5,
+            dy=-7,
             color=BAR_COLOR,
-            fontWeight="bold"
+            #fontWeight="bold",
+            fontSize=14
         ).encode(
             x=alt.X(
                 "event_type:N",
@@ -460,7 +465,7 @@ with bottom_right:
             base = alt.Chart(top_entities_df)
 
             bars = base.mark_bar(color=BAR_COLOR).encode(
-                x=alt.X("total_events:Q", title="Total events"),
+                x=alt.X("total_events:Q", title="Total events", axis=alt.Axis(grid=False)),
                 y=alt.Y("entity_label:N", sort="-x", title=None),
                 tooltip=[
                     alt.Tooltip("entity_name:N", title="Full name"),
@@ -470,8 +475,9 @@ with bottom_right:
 
             text = base.mark_text(
                 align="right",
-                dx=-5,
-                fontWeight="bold"
+                dx=-7,
+                #fontWeight="bold"
+                fontSize=14
             ).encode(
                 x=alt.X("total_events:Q"),
                 y=alt.Y("entity_label:N", sort="-x"),
