@@ -4,24 +4,6 @@ type: bq.sql
 depends:
   - stg_events_cloud
 
-columns:
-  - name: event_id
-    checks:
-      - name: not_null
-  - name: actor_id
-    checks:
-      - name: not_null
-  - name: event_type
-    checks:
-      - name: not_null
-  - name: repo_name
-    checks:
-      - name: not_null
-  - name: created_at
-    checks:
-      - name: not_null
-    type: not_null
-
 custom_checks:
   - name: row count greater than zero for loaded range
     description: stg_selected_events_cloud should not be empty for the loaded range

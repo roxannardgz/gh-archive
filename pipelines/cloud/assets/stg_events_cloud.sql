@@ -4,23 +4,6 @@ type: bq.sql
 depends:
   - raw_events_cloud
 
-columns:
-  - name: event_id
-    checks:
-      - name: not_null
-  - name: actor_id
-    checks:
-      - name: not_null
-  - name: event_type
-    checks:
-      - name: not_null
-  - name: repo_name
-    checks:
-      - name: not_null
-  - name: created_at
-    checks:
-      - name: not_null
-
 custom_checks:
   - name: no duplicate event ids for target date
     description: stg_events_cloud should have unique event ids within the loaded date

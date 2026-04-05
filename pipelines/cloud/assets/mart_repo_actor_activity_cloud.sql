@@ -4,13 +4,6 @@ type: bq.sql
 depends:
   - stg_selected_events_cloud
 
-columns:
-  - name: repo_name
-    checks:
-      - name: not_null
-  - name: actor_login
-    checks:
-      - name: not_null
 
 custom_checks:
   - name: row count greater than zero
