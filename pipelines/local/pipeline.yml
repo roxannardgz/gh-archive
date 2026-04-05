@@ -1,0 +1,16 @@
+name: gharchive-local
+schedule: daily
+start_date: "2026-03-01"
+catchup: false
+concurrency: 1
+
+default_connections:
+  duckdb: "gharchive"
+
+default:
+  type: duckdb.sql
+
+variables:
+  lookback_days:
+    type: integer
+    default: 7

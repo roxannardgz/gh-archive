@@ -1,0 +1,11 @@
+name: gharchive-cloud
+schedule: "0 2 * * *"
+start_date: "2026-03-01"
+catchup: false
+concurrency: 1
+
+default_connections:
+  google_cloud_platform: "gharchive_bq"
+
+default:
+  type: bq.sql
