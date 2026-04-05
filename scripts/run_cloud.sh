@@ -11,5 +11,5 @@ fi
 bruin run \
   --start-date "${1:-${YESTERDAY}T00:00:00Z}" \
   --end-date "${2:-${YESTERDAY}T23:59:59Z}" \
-  pipeline/cloud/assets/*.py \
-  pipeline/cloud/assets/*.sql
+  pipelines/cloud/assets/*.py \
+  pipelines/cloud/assets/*.sql

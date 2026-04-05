@@ -1,5 +1,5 @@
 #!/bin/bash
 
 bruin run \
-  pipeline/local/assets/*.py \
-  pipeline/local/assets/*.sql
+  pipelines/local/assets/*.py \
+  pipelines/local/assets/*.sql
