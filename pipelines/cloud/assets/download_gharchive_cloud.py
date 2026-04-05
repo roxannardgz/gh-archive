@@ -9,6 +9,7 @@ import os
 import subprocess
 import time
 from datetime import date, datetime, timedelta
+from google.cloud import bigquery
 
 
 def parse_date(value: str) -> date:
@@ -57,6 +58,27 @@ def build_gcs_uri_for_day(day: date) -> str:
     )
 
 
+# def export_day_to_gcs(day: date) -> None:
+#     gcs_uri = build_gcs_uri_for_day(day)
+# 
+#     query = f"""
+#     EXPORT DATA OPTIONS(
+#         uri='{gcs_uri}',
+#         format='PARQUET',
+#         overwrite=true
+#     ) AS
+#     SELECT *
+#     FROM `githubarchive.day.{day.strftime("%Y%m%d")}`
+#     """
+# 
+#     print(f"Exporting {day} to {gcs_uri}")
+# 
+#     subprocess.run(
+#         ["bq", "query", "--use_legacy_sql=false", "--location=US", query],
+#         check=True,
+#     )
+
+
 def export_day_to_gcs(day: date) -> None:
     gcs_uri = build_gcs_uri_for_day(day)
 
@@ -72,10 +94,9 @@ def export_day_to_gcs(day: date) -> None:
 
     print(f"Exporting {day} to {gcs_uri}")
 
-    subprocess.run(
-        ["bq", "query", "--use_legacy_sql=false", "--location=US", query],
-        check=True,
-    )
+    client = bigquery.Client(project="gharchive-491810")
+    job = client.query(query, location="US")
+    job.result()
 
 
 def run_cloud_mode(window_start: date, window_end: date) -> None:
