@@ -1,11 +1,13 @@
 default_environment: default
 environments:
-    default:
+    local:
         connections:
             duckdb:
                 - name: "gharchive"
                   path: "gharchive.duckdb"
 
+    cloud:
+        connections:
             google_cloud_platform:
                 - name: "gharchive_bq"
                   project_id: "gharchive-491810"
