@@ -27,35 +27,12 @@ def parse_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
 
 
-def get_window_end() -> date:
-    bruin_end_date = os.environ.get("BRUIN_END_DATE")
-    if bruin_end_date:
-        return parse_date(bruin_end_date)
+def get_target_day() -> date:
+    bruin_execution_date = os.environ.get("BRUIN_EXECUTION_DATE")
+    if bruin_execution_date:
+        return parse_date(bruin_execution_date) - timedelta(days=1)
+
     return date.today() - timedelta(days=1)
-
-
-def get_window_start_from_env() -> date | None:
-    bruin_start_date = os.environ.get("BRUIN_START_DATE")
-    if bruin_start_date:
-        return parse_date(bruin_start_date)
-    return None
-
-
-def get_window_bounds() -> tuple[date, date]:
-    window_end = get_window_end()
-    window_start_from_env = get_window_start_from_env()
-
-    if window_start_from_env:
-        return window_start_from_env, window_end
-
-    return window_end, window_end
-
-
-def daterange(start: date, end: date):
-    current = start
-    while current <= end:
-        yield current
-        current += timedelta(days=1)
 
 
 def build_gcs_uri_for_day(day: date) -> str:
@@ -72,7 +49,6 @@ def get_bigquery_client() -> bigquery.Client:
     raw = json.loads(os.environ["GCP_CONN"])
 
     project_id = os.environ.get("GCP_PROJECT_ID", raw["project_id"])
-
     service_account_json = raw.get("service_account_json")
 
     if service_account_json:
@@ -109,11 +85,6 @@ def export_day_to_gcs(day: date) -> None:
     job.result()
 
 
-def run_cloud_mode(window_start: date, window_end: date) -> None:
-    for day in daterange(window_start, window_end):
-        export_day_to_gcs(day)
-
-
 def format_seconds(seconds: float) -> str:
     minutes, secs = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
@@ -128,13 +99,16 @@ def format_seconds(seconds: float) -> str:
 def main() -> None:
     start_time = time.time()
 
-    window_start, window_end = get_window_bounds()
+    target_day = get_target_day()
 
-    print(f"Cloud mode. Target window: {window_start} to {window_end}")
-    run_cloud_mode(window_start, window_end)
+    print(f"Cloud mode. Target day: {target_day}")
+    export_day_to_gcs(target_day)
 
     elapsed = time.time() - start_time
     print(f"Done. Total runtime: {format_seconds(elapsed)}")
+
+    print("BRUIN_EXECUTION_DATE =", os.environ.get("BRUIN_EXECUTION_DATE"))
+    print("TARGET_DAY =", get_target_day())
 
 
 if __name__ == "__main__":

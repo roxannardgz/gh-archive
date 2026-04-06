@@ -10,13 +10,12 @@ custom_checks:
     query: |
       SELECT COUNT(*) > 0
       FROM `gharchive-491810.gharchive_dataset.stg_selected_events`
-      WHERE DATE(created_at) BETWEEN DATE('{{ start_date }}') AND DATE('{{ end_date }}')
+      WHERE DATE(created_at) = DATE_SUB(DATE('{{ execution_date }}'), INTERVAL 1 DAY)
     value: 1
 
 @bruin */
 
-DECLARE start_date DATE DEFAULT DATE('{{ start_date }}');
-DECLARE end_date DATE DEFAULT DATE('{{ end_date }}');
+DECLARE target_date DATE DEFAULT DATE_SUB(DATE('{{ execution_date }}'), INTERVAL 1 DAY);
 
 CREATE TABLE IF NOT EXISTS `gharchive-491810.gharchive_dataset.stg_selected_events` (
   event_id STRING,
@@ -33,12 +32,12 @@ PARTITION BY DATE(created_at)
 CLUSTER BY repo_name;
 
 DELETE FROM `gharchive-491810.gharchive_dataset.stg_selected_events`
-WHERE DATE(created_at) BETWEEN start_date AND end_date;
+WHERE DATE(created_at) = target_date;
 
 INSERT INTO `gharchive-491810.gharchive_dataset.stg_selected_events`
 SELECT *
 FROM `gharchive-491810.gharchive_dataset.stg_events`
-WHERE DATE(created_at) BETWEEN start_date AND end_date
+WHERE DATE(created_at) = target_date
   AND repo_name IN (
     'apache/airflow',
     'ClickHouse/ClickHouse',

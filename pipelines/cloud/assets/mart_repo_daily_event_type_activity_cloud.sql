@@ -11,7 +11,7 @@ custom_checks:
     query: |
       SELECT COUNT(*) > 0
       FROM `gharchive-491810.gharchive_dataset.mart_repo_daily_event_type_activity`
-      WHERE event_date BETWEEN DATE('{{ start_date }}') AND DATE('{{ end_date }}')
+      WHERE DATE(event_date) = DATE_SUB(DATE('{{ execution_date }}'), INTERVAL 1 DAY)
     value: 1
 
   - name: valid event counts for loaded range
@@ -19,7 +19,7 @@ custom_checks:
     query: |
       SELECT MIN(total_events) > 0
       FROM `gharchive-491810.gharchive_dataset.mart_repo_daily_event_type_activity`
-      WHERE event_date BETWEEN DATE('{{ start_date }}') AND DATE('{{ end_date }}')
+      WHERE DATE(event_date) = DATE_SUB(DATE('{{ execution_date }}'), INTERVAL 1 DAY)
     value: 1
 
   - name: valid actor counts for loaded range
@@ -27,7 +27,7 @@ custom_checks:
     query: |
       SELECT MIN(unique_actors) > 0
       FROM `gharchive-491810.gharchive_dataset.mart_repo_daily_event_type_activity`
-      WHERE event_date BETWEEN DATE('{{ start_date }}') AND DATE('{{ end_date }}')
+      WHERE DATE(event_date) = DATE_SUB(DATE('{{ execution_date }}'), INTERVAL 1 DAY)
     value: 1
 
   - name: unique grain for loaded range
@@ -35,13 +35,12 @@ custom_checks:
     query: |
       SELECT COUNT(*) = COUNT(DISTINCT CONCAT(repo_name, CAST(event_date AS STRING), event_type))
       FROM `gharchive-491810.gharchive_dataset.mart_repo_daily_event_type_activity`
-      WHERE event_date BETWEEN DATE('{{ start_date }}') AND DATE('{{ end_date }}')
+      WHERE DATE(event_date) = DATE_SUB(DATE('{{ execution_date }}'), INTERVAL 1 DAY)
     value: 1
 
 @bruin */
 
-DECLARE start_date DATE DEFAULT DATE('{{ start_date }}');
-DECLARE end_date DATE DEFAULT DATE('{{ end_date }}');
+DECLARE target_date DATE DEFAULT DATE_SUB(DATE('{{ execution_date }}'), INTERVAL 1 DAY);
 
 CREATE TABLE IF NOT EXISTS `gharchive-491810.gharchive_dataset.mart_repo_daily_event_type_activity` (
   repo_name STRING,
@@ -62,7 +61,7 @@ USING (
     COUNT(*) AS total_events,
     COUNT(DISTINCT actor_login) AS unique_actors
   FROM `gharchive-491810.gharchive_dataset.stg_selected_events`
-  WHERE DATE(created_at) BETWEEN start_date AND end_date
+  WHERE DATE(created_at) = target_date
   GROUP BY repo_name, DATE(created_at), event_type
 ) AS source
 ON target.repo_name = source.repo_name
