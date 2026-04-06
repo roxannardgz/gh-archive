@@ -86,13 +86,14 @@ class DataBackend:
         if self.source == "Local":
             if duckdb is None:
                 raise RuntimeError("duckdb is not installed in this environment.")
-            with duckdb.connect(LOCAL_DUCKDB_PATH, read_only=True) as con:
-                return con.execute(sql).df()
+            return run_duckdb_query(LOCAL_DUCKDB_PATH, sql)
 
         if bigquery is None:
             raise RuntimeError("google-cloud-bigquery is not installed in this environment.")
-        client = bigquery.Client(project=BQ_PROJECT)
-        return client.query(sql).to_dataframe()
+        return run_bq_query(sql)
+    
+
+
 
 
 # ---------- SQL helpers ----------
