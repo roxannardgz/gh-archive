@@ -2,7 +2,7 @@
 name: download_gharchive_cloud
 image: python:3.11
 secrets:
-  - key: google_cloud_platform
+  - key: gharchive_bq
     inject_as: GCP_CONN
 @bruin"""
 
