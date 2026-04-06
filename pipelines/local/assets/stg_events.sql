@@ -13,9 +13,6 @@ columns:
   - name: event_type
     checks:
       - name: not_null
-  - name: repo_name
-    checks:
-      - name: not_null
   - name: created_at
     checks:
       - name: not_null
