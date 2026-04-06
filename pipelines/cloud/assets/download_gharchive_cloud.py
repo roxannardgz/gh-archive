@@ -94,7 +94,7 @@ def export_day_to_gcs(day: date) -> None:
 
     print(f"Exporting {day} to {gcs_uri}")
 
-    client = bigquery.Client()
+    client = bigquery.Client(project="gharchive-491810")
     job = client.query(query, location="US")
     job.result()
 
