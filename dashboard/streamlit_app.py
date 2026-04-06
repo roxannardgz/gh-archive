@@ -1,6 +1,8 @@
 import os
 from dataclasses import dataclass
 from typing import Literal, Optional
+from pathlib import Path
+
 
 import pandas as pd
 import streamlit as st
@@ -20,6 +22,25 @@ except Exception:
 
 DataSource = Literal["Local", "Cloud"]
 
+
+# ---------- Cached connections ----------
+@st.cache_resource
+def get_bq_client():
+    return bigquery.Client(project=os.getenv("BQ_PROJECT", "gharchive-491810"))
+
+
+# ---------- Cached query runners ----------
+@st.cache_data(ttl=600, show_spinner=False)
+def run_bq_query(sql: str) -> pd.DataFrame:
+    client = get_bq_client()
+    return client.query(sql).to_dataframe()
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def run_duckdb_query(db_path: str, sql: str) -> pd.DataFrame:
+    with duckdb.connect(db_path, read_only=True) as con:
+        return con.execute(sql).df()
+    
 
 # ---------- Config ----------
 LOCAL_DUCKDB_PATH = "gharchive.duckdb"
