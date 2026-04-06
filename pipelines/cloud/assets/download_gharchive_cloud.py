@@ -17,6 +17,10 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 
 
+def get_bucket_name() -> str:
+    return os.environ.get("GCS_BUCKET", "gharchive-491810-bucket")
+
+
 def parse_date(value: str) -> date:
     if "T" in value:
         value = value.split("T")[0]
@@ -55,8 +59,10 @@ def daterange(start: date, end: date):
 
 
 def build_gcs_uri_for_day(day: date) -> str:
+    bucket = get_bucket_name()
+
     return (
-        f"gs://gharchive-491810-bucket/"
+        f"gs://{bucket}/"
         f"raw/year={day.year}/month={day.month:02d}/day={day.day:02d}/"
         f"part-*.parquet"
     )
@@ -65,14 +71,22 @@ def build_gcs_uri_for_day(day: date) -> str:
 def get_bigquery_client() -> bigquery.Client:
     raw = json.loads(os.environ["GCP_CONN"])
 
-    # Adjust these keys if your connection JSON uses slightly different names
-    project_id = raw["project_id"]
-    service_account_json = raw["service_account_json"]
+    project_id = os.environ.get("GCP_PROJECT_ID", raw["project_id"])
 
-    sa_info = json.loads(service_account_json)
-    credentials = service_account.Credentials.from_service_account_info(sa_info)
+    service_account_json = raw.get("service_account_json")
 
-    return bigquery.Client(project=project_id, credentials=credentials)
+    if service_account_json:
+        sa_info = json.loads(service_account_json)
+        credentials = service_account.Credentials.from_service_account_info(sa_info)
+        return bigquery.Client(project=project_id, credentials=credentials)
+
+    if raw.get("use_application_default_credentials"):
+        return bigquery.Client(project=project_id)
+
+    raise ValueError(
+        "GCP connection must include either a non-empty 'service_account_json' "
+        "or 'use_application_default_credentials: true'."
+    )
 
 
 def export_day_to_gcs(day: date) -> None:
