@@ -1,15 +1,20 @@
 """@bruin
 name: download_gharchive_cloud
 image: python:3.11
+secrets:
+  - key: google_cloud_platform
+    inject_as: GCP_CONN
 @bruin"""
 
 from __future__ import annotations
 
+import json
 import os
-import subprocess
 import time
 from datetime import date, datetime, timedelta
+
 from google.cloud import bigquery
+from google.oauth2 import service_account
 
 
 def parse_date(value: str) -> date:
@@ -22,7 +27,6 @@ def get_window_end() -> date:
     bruin_end_date = os.environ.get("BRUIN_END_DATE")
     if bruin_end_date:
         return parse_date(bruin_end_date)
-
     return date.today() - timedelta(days=1)
 
 
@@ -58,25 +62,17 @@ def build_gcs_uri_for_day(day: date) -> str:
     )
 
 
-# def export_day_to_gcs(day: date) -> None:
-#     gcs_uri = build_gcs_uri_for_day(day)
-# 
-#     query = f"""
-#     EXPORT DATA OPTIONS(
-#         uri='{gcs_uri}',
-#         format='PARQUET',
-#         overwrite=true
-#     ) AS
-#     SELECT *
-#     FROM `githubarchive.day.{day.strftime("%Y%m%d")}`
-#     """
-# 
-#     print(f"Exporting {day} to {gcs_uri}")
-# 
-#     subprocess.run(
-#         ["bq", "query", "--use_legacy_sql=false", "--location=US", query],
-#         check=True,
-#     )
+def get_bigquery_client() -> bigquery.Client:
+    raw = json.loads(os.environ["GCP_CONN"])
+
+    # Adjust these keys if your connection JSON uses slightly different names
+    project_id = raw["project_id"]
+    service_account_json = raw["service_account_json"]
+
+    sa_info = json.loads(service_account_json)
+    credentials = service_account.Credentials.from_service_account_info(sa_info)
+
+    return bigquery.Client(project=project_id, credentials=credentials)
 
 
 def export_day_to_gcs(day: date) -> None:
@@ -94,7 +90,7 @@ def export_day_to_gcs(day: date) -> None:
 
     print(f"Exporting {day} to {gcs_uri}")
 
-    client = bigquery.Client(project="gharchive-491810")
+    client = get_bigquery_client()
     job = client.query(query, location="US")
     job.result()
 
@@ -121,7 +117,6 @@ def main() -> None:
     window_start, window_end = get_window_bounds()
 
     print(f"Cloud mode. Target window: {window_start} to {window_end}")
-
     run_cloud_mode(window_start, window_end)
 
     elapsed = time.time() - start_time
