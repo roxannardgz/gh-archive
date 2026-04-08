@@ -4,3 +4,6 @@ primaryColor = "#4078c0"
 
 [theme.sidebar]
 primaryColor = "#4078c0"
+
+[server]
+folderWatchBlacklist = ["data", "pipeline", "logs", ".bruin", ".git", "__pycache__"]
