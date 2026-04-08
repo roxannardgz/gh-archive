@@ -72,7 +72,7 @@ Although similar, each execution mode has their own architecture. Both models fi
 - Mart layer
   - Builds aggregated tables by repo, event type, and actor
 
-> [!IMPORTANT]
+> [!NOTE]
 > The local pipeline intentionally keeps a fixed 7-day rolling window instead of storing the full history locally. This keeps local development faster, lighter, and aligned with the dashboard use case.
 
 
