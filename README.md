@@ -166,7 +166,7 @@ The cloud pipeline can run:
 
 This keeps the cloud logic consistent across environments and reduces the risk of “dev vs prod” drift.
 
-### 3. Daily ingestion based on the previous UTC day
+### Daily ingestion based on the previous UTC day
 The pipeline processes one complete UTC day at a time, using the previous day as the data target.
 
 This avoids:
