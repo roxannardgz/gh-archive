@@ -1,8 +1,13 @@
 # GH Archive Analytics Pipeline
 ## Table of Contents
-- Overview
-- Tech Stack
-- Architecture and Modeling Approach
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Architecture and Modeling Approach](#architecture-and-modeling-approach)
+    - [Checks and Validation](#checks-and-validation)
+- [Dashboard](#dashboard)
+- [Key Design Decision](#key-design-decision)
+- [How to Reproduce](#how-to-reproduce)
+- [Selected Repos](#selected-repos)
 
 
 ## Overview
@@ -90,7 +95,7 @@ Although similar, each execution mode has their own architecture. Both models fi
 
 <summary>🔵 Cloud</summary>
 
-#### Ingestion and storage
+#### Ingestion
 - Python asset orchestrated with Bruin
 - Reads from BigQuery public dataset: `githubarchive.day.*`
 - Exports that day to GCS in Parquet Format
@@ -348,8 +353,6 @@ uv run streamlit run dashboard/streamlit_app.py
 The select the correct data source in the dashboard sidebar.
 
 
-## Challenges and lessons learned
-
 ## Selected Repos
 The project focuses on a curated set of 15 data engineering / analytics repositories:
 
@@ -373,6 +376,7 @@ The project focuses on a curated set of 15 data engineering / analytics reposito
 > This list can be changed. To analyze a different set of repositories, update the filtering logic in the asset that creates `stg_selected_events`.
 
 
+<!--
 ## 🧪 Backfilling
 ```
 bruin run \
@@ -381,6 +385,7 @@ bruin run \
   pipeline/assets/cloud/*.py \
   pipeline/assets/cloud/*.sql
 ```
+-->
 
 
 [^1]: `union_by_name` helps handle schema drift when reading multiple JSON files whose fields are not perfectly aligned. DuckDB aligns columns by name and fills missing values with nulls where needed.
