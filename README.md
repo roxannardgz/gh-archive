@@ -1,6 +1,11 @@
 # GH Archive Analytics Pipeline
-## Overview
+## Table of Contents
+- Overview
+- Tech Stack
+- Architecture and Modeling Approach
 
+
+## Overview
 This project builds a complete data workflow to analyze GitHub activity using the [GH Archive dataset](https://www.gharchive.org/). It ingests GitHub event data and transforms it into analytical tables, which are then visualized in an interactive Streamlit dashboard.
 
 The project includes two pipelines based on storage backend:
@@ -13,7 +18,8 @@ The project includes two pipelines based on storage backend:
 
 > [!NOTE]
 > The cloud pipeline supports both local execution (for development/testing) and cloud execution (for scheduled runs).
->
+
+> [!NOTE]
 > The project is designed to be reproducible in both local and cloud setups and to support the same analytical use case across both.
 
 
@@ -41,6 +47,8 @@ This project demonstrates:
 
 ## Architecture and Modeling Approach
 Although similar, each execution mode has their own architecture. Both models filter to a [set of data engineering / analytics repositories](#selected-repos).
+
+![General Architecture](images/gharchive-general-architecture.drawio.png)
 
 <details>
 
@@ -75,7 +83,6 @@ Although similar, each execution mode has their own architecture. Both models fi
 > [!NOTE]
 > The local pipeline intentionally keeps a fixed 7-day rolling window instead of storing the full history locally. This keeps local development faster, lighter, and aligned with the dashboard use case.
 
-
 </details>
 
 
@@ -83,7 +90,7 @@ Although similar, each execution mode has their own architecture. Both models fi
 
 <summary>🔵 Cloud</summary>
 
-#### Ingestion and storege
+#### Ingestion and storage
 - Python asset orchestrated with Bruin
 - Reads from BigQuery public dataset: `githubarchive.day.*`
 - Exports that day to GCS in Parquet Format
@@ -111,12 +118,9 @@ Although similar, each execution mode has their own architecture. Both models fi
 ### Data model
 Both pipelines support the same analytics flow:
 
-- **Raw**
-  - Closest representation of source data
-- **Staging**
-  - Cleaned and standardized event-level data
-- **Marts**
-  - Dashboard-ready aggregates
+- **Raw**: Closest representation of source data
+- **Staging**: Cleaned and standardized event-level data
+- **Marts**: Dashboard-ready aggregates
 
 Main marts used by the dashboard:
 
@@ -136,8 +140,8 @@ The project uses custom SQL checks across layers[^3]:
 - **Marts**
   - aggregation and business logic validation
 
-> [!WARNING]
-> Some checks that may look reasonable at first, such as enforcing `repo_name IS NOT NULL` in staging, were intentionally not used because the source data can legitimately contain nulls.
+> [!IMPORTANT]
+> Some checks, such as enforcing `repo_name IS NOT NULL` in staging, were intentionally not used because the source data can legitimately contain nulls.
 
 
 
@@ -150,8 +154,9 @@ The Streamlit dashboard supports both data sources. It includes:
 - Top repos / top contributors
 - Repo filter (`All repos` or a specific repo)
 
-The dashboard reads from marts rather than raw tables to keep the UI logic simpler and the queries lighter.
+![Streamlit Dashboard](/images/strealmit-dashboard.png)
 
+The dashboard reads from marts rather than raw tables to keep the UI logic simpler and the queries lighter.
 
 
 ## Key Design Decision
@@ -277,6 +282,8 @@ Use this mode when you want to test the cloud pipeline locally before scheduling
  ### Provision cloud resources
 Terraform is used to provision the main cloud resources for the project.
 
+Edit the `terraform.tfvars` file to update the project ID
+
 From the Terraform directory:
 ```
 terraform init
@@ -375,7 +382,6 @@ bruin run \
   pipeline/assets/cloud/*.sql
 ```
 
-## Footnotes
 
 [^1]: `union_by_name` helps handle schema drift when reading multiple JSON files whose fields are not perfectly aligned. DuckDB aligns columns by name and fills missing values with nulls where needed.
 
