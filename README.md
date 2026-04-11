@@ -1,7 +1,8 @@
 # GH Archive Analytics Pipeline
-Data Engineering Zoomcamp 2026: Final project.
+[Data Engineering Zoomcamp](https://datatalks.club/blog/data-engineering-zoomcamp.html) 2026 by *Data Talks Club*
+ Final project.
 
-Are you a peer reviewer? See the [review guide](/peer-reviewers.md) for a structured overview of the project.
+> **Are you a peer reviewer?** See this [review guide](/peer-reviewers.md) for a structured overview of the project based on the evaluation criteria.
 
 
 ## Table of Contents
