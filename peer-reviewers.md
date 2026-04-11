@@ -17,7 +17,7 @@ It also demonstrates how the same pipeline can run both locally and in the cloud
 - How to provide fast analytics through pre-aggregated tables and a dashboard
 
 📍 See: 
-- [README.md](/README.md) → Overview
+- [README.md](/README.md#overview) → Overview
 
 
 ## 2. Cloud
@@ -32,7 +32,7 @@ Infrastructure is provisioned using Terraform (IaC), ensuring reproducibility an
 - BigQuery dataset
 
 📍 See:
-- [README.md](/README.md) → Architecture and Modeling Approach → Cloud Mode
+- [README.md](/README.md#-cloud-pipeline) → Architecture and Modeling Approach → Cloud Pipeline
 - [terraform/](/terraform/)
 
 
@@ -95,7 +95,7 @@ They include:
 📍 See:
 - [pipelines/local/assets/](/pipelines/local/assets/)
 - [pipelines/cloud/assets/](/pipelines/cloud/assets/)
-- [README.md](/README.md) → Architecture and Modeling Approach
+- [README.md](/README.md#architecture-and-modeling-approach) → Architecture and Modeling Approach
 
 
 ## 6. Dashboard
@@ -133,4 +133,13 @@ The project includes complete and tested instructions to reproduce the pipeline 
 - Backfilling
 
 📍 See:
-- [README.md](/README.md) → How to Reproduce
+- [README.md](/README.md#how-to-reproduce) → How to Reproduce
+
+## Summary
+
+This project demonstrates:
+- End-to-end batch data pipeline
+- Cloud implementation with IaC
+- Optimized data warehouse design
+- Multiple dashboard visualizations
+- Full reproducibility
