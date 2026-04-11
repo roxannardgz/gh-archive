@@ -2,6 +2,7 @@
 [Data Engineering Zoomcamp](https://datatalks.club/blog/data-engineering-zoomcamp.html) 2026 by *Data Talks Club*
  Final project.
 
+> [!TIP]
 > **Are you a peer reviewer?** See this [review guide](/peer-reviewers.md) for a structured overview of the project based on the evaluation criteria.
 
 
@@ -235,9 +236,9 @@ source .venv/bin/activate
 uv sync
 ```
 
-<hr>
-<hr>
+Continue with [🟡 Local Mode](#-local-mode), [🔵 Cloud Mode (Local Execution)](#-cloud-mode-local-execution) or [🔵 Cloud Mode (Bruin Cloud)](#-cloud-mode-bruin-cloud).
 
+---
 ### 🟡 Local Mode
 
 Use this mode when you want the fastest feedback loop for development, debugging, and dashboard work.
@@ -267,7 +268,9 @@ What it does
 - Staging and mart tables should be available
 
 
-<hr>
+Continue with the [dashboard](#run-the-dashboard)
+
+────────────
 
 ### 🔵 Cloud Mode (Local Execution)
 
@@ -330,7 +333,10 @@ What it does
 - Confirm that Parquet files were written to the configured GCS bucket
 - Confirm that raw, staging, and mart tables were created in BigQuery
 
-<hr>
+
+Continue with the [dashboard](#run-the-dashboard)
+
+────────────
 
 ### 🔵 Cloud Mode (Bruin Cloud)
 
@@ -370,8 +376,10 @@ Use this mode for scheduled execution in the cloud.
 - Confirm that Parquet files are written to the configured GCS bucket
 - Confirm that raw, staging, and mart tables are updated in BigQuery
 
-<hr>
-<hr>
+
+Continue with the [dashboard](#run-the-dashboard)
+
+---
 
 ### Run the dashboard
 The dashboard reads from either DuckDB (local) or BigQuery (cloud), depending on the selected source.
