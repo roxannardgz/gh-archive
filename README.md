@@ -3,6 +3,8 @@
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Architecture and Modeling Approach](#architecture-and-modeling-approach)
+    - [Local Pipeline](#-local-pipeline)
+    - [Cloud Pipeline](#-cloud-pipeline)
     - [Checks and Validation](#checks-and-validation)
 - [Dashboard](#dashboard)
 - [Key Design Decision](#key-design-decision)
@@ -55,9 +57,8 @@ Although similar, each execution mode has their own architecture. Both models fi
 
 ![General Architecture](images/gharchive-general-architecture.drawio.png)
 
-<details>
 
-<summary>🟡 Local</summary>
+### 🟡 Local Pipeline
 
 #### Ingestion
 - Python asset orchestrated with Bruin
@@ -88,12 +89,7 @@ Although similar, each execution mode has their own architecture. Both models fi
 > [!NOTE]
 > The local pipeline intentionally keeps a fixed 7-day rolling window instead of storing the full history locally. This keeps local development faster, lighter, and aligned with the dashboard use case.
 
-</details>
-
-
-<details>
-
-<summary>🔵 Cloud</summary>
+### 🔵 Cloud Pipeline
 
 #### Ingestion
 - Python asset orchestrated with Bruin
@@ -118,32 +114,13 @@ Although similar, each execution mode has their own architecture. Both models fi
 - Mart Layer
   - Builds aggregated tables by repo, event type, and actor
 
-</details>
-
-### Data model
-Both pipelines support the same analytics flow:
-
-- **Raw**: Closest representation of source data
-- **Staging**: Cleaned and standardized event-level data
-- **Marts**: Dashboard-ready aggregates
-
-Main marts used by the dashboard:
-
-- `mart_repo_daily_activity`
-- `mart_repo_daily_event_type_activity`
-- `mart_repo_actor_activity`
-- `mart_repo_summary`
-
 
 ### Checks and Validation
 The project uses custom SQL checks across layers[^3]:
 
-- **Raw**
-  - basic integrity checks
-- **Staging**
-  - structural and transformation checks
-- **Marts**
-  - aggregation and business logic validation
+- **Raw**: basic integrity checks
+- **Staging**: structural and transformation checks
+- **Marts**: aggregation and business logic validation
 
 > [!IMPORTANT]
 > Some checks, such as enforcing `repo_name IS NOT NULL` in staging, were intentionally not used because the source data can legitimately contain nulls.
@@ -165,10 +142,10 @@ The dashboard reads from marts rather than raw tables to keep the UI logic simpl
 
 
 ## Key Design Decision
-### Two independent pipelines instead of one heavily parameterized pipeline
+### ▫️Two independent pipelines instead of one heavily parameterized pipeline
 Instead of a single parameterized pipeline, there are 2 independent pipelines (`gharcihve-local`, `gharchive-cloud`). This avoids excessive conditional logic, keeps dependencies simpler, and makes each setup easier to reason about and debug.
 
-### Same cloud pipeline, different execution environments
+### ▫️Same cloud pipeline, different execution environments
 The cloud pipeline can run:
 
 - locally, for development and testing
@@ -176,7 +153,7 @@ The cloud pipeline can run:
 
 This keeps the cloud logic consistent across environments and reduces the risk of “dev vs prod” drift.
 
-### Daily ingestion based on the previous UTC day
+### ▫️Daily ingestion based on the previous UTC day
 The pipeline processes one complete UTC day at a time, using the previous day as the data target.
 
 This avoids:
@@ -187,7 +164,7 @@ This avoids:
 
 It also makes daily reruns and backfills safer.
 
-### Idempotent daily loading
+### ▫️Idempotent daily loading
 The project favors rerunnable daily loads:
 
 - **Local**
@@ -199,7 +176,7 @@ The project favors rerunnable daily loads:
 
 This makes reruns and backfills simpler and more predictable.
 
-### Terraform for reproducible cloud infrastructure
+### ▫️Terraform for reproducible cloud infrastructure
 
 Terraform is used to provision the main cloud resources required by the project, including:
 
@@ -208,7 +185,7 @@ Terraform is used to provision the main cloud resources required by the project,
 
 This keeps the infrastructure reproducible and reduces manual setup.
 
-### Mart loading strategy
+### ▫️Mart loading strategy
 
 | Table | Strategy | Reason |
 | --- | --- | --- |
@@ -218,8 +195,8 @@ This keeps the infrastructure reproducible and reduces manual setup.
 | `mart_repo_summary` | Full rebuild | Small summary table; full rebuild keeps logic simple and correctness easy to verify |
 
 
-### Unified Streamlit app
-Supports both DuckDB (local) and BigQuery (cloud)
+### ▫️Unified Streamlit app
+A single Streamlit application supports both DuckDB (local) and BigQuery (cloud) as data sources. This avoids duplicating dashboard logic and ensures consistent metrics and visualizations across environments. It also enables seamless switching between local development and cloud data without modifying the UI layer.
 
 ## How to Reproduce
 Both execution modes run "yesterday" by default.
