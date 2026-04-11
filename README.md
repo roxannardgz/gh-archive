@@ -199,16 +199,26 @@ This keeps the infrastructure reproducible and reduces manual setup.
 A single Streamlit application supports both DuckDB (local) and BigQuery (cloud) as data sources. This avoids duplicating dashboard logic and ensures consistent metrics and visualizations across environments. It also enables seamless switching between local development and cloud data without modifying the UI layer.
 
 ## How to Reproduce
-Both execution modes run "yesterday" by default.
+By default, all pipeline runs process the previous UTC day. Check [here]() for how to backfill a custom date range.
 
-### Clone the repository
+### Requirements
+- Git
+- Python 3.11+
+- `uv`
+- Bruin CLI
+- Terraform (Cloud mode only)
+- Google Cloud SDK (`gcloud`) (Cloud mode only)
+- Access to a GCP project with permission to use GCS and BigQuery (Cloud modes only)
+
+### Setup
+From the repo root, clone the repository and install dependencies:
+
 ```
 git clone https://github.com/roxannardgz/gh-archive
 cd gh-archive
 ```
 
-### Set up the environment
-Ths project uses `uv`.
+This project uses `uv`.
 ```
 uv venv
 source .venv/bin/activate
@@ -220,10 +230,8 @@ uv sync
 <summary>🟡 Local Mode</summary>
 Use this mode when you want the fastest feedback loop for development, debugging, and dashboard work.
 
-### Requirements
-- Python environment set up with uv
-- DuckDB dependencies installed through the project environment
-
+> [!IMPORTANT]
+> The local pipeline should run without additional cloud configuration. If you changed default paths or connection names in your local Bruin configuration, update them before running.
 
 ### Run pipeline
 You can use the helper script:
@@ -233,7 +241,7 @@ You can use the helper script:
 
 Or run the assets directly with Bruin:
 ```
-bruin run pipeline/assets/local/*.py pipeline/assets/local/*.sql
+bruin run pipelines/local/assets/*.py pipelines/local/assets/*.sql
 ```
 
 What it does
@@ -242,6 +250,9 @@ What it does
 - Builds staging and mart tables
 - Keeps a rolling 7-day local window
 
+### Validate results
+- A `gharchive.duckdb` file should be created/updated
+- Staging and mart tables should be available
 
 </details>
 
@@ -252,6 +263,10 @@ What it does
 
 Use this mode when you want to test the cloud pipeline locally before scheduling it.
 
+> [!IMPORTANT]
+> Ensure that project-specific values (GCP project ID, dataset, bucket name) match your environment. Defaults are provided but may need to be updated.
+
+
 ### Requirements
 - Python environment set up with uv
 - GCP credentials configured
@@ -261,26 +276,28 @@ Use this mode when you want to test the cloud pipeline locally before scheduling
     - GCS bucket
     - BigQuery dataset
 
- ### Provision cloud resources
+### Provision cloud resources
 Terraform is used to provision the main cloud resources for the project.
 
-Edit the `terraform.tfvars` file to update the project ID
+Update `terraform.tfvars` with your GCP project ID and any required resource names.
 
-From the Terraform directory:
+From the `terraform/` directory, run:
 ```
 terraform init
 terraform plan
 terraform apply
 ```
-This provisions the cloud storage and warehouse resources used by the cloud pipeline.
+This creates the GCS bucket and BigQuery dataset used by the cloud pipeline.
 
-### Authenticate with GCP
+### Authenticate with Google Cloud
 
-You need valid Google Cloud credentials before running the cloud pipeline locally.
-
-A common local setup is:
+The local cloud pipeline uses Application Default Credentials:
+```
 gcloud auth application-default login
 gcloud auth application-default set-quota-project <your-gcp-project-id>
+```
+
+Review the cloud pipeline configuration and confirm that the project ID, dataset, bucket, and connection names match your environment.
 
 ### Run the cloud pipeline locally
 You can use the helper script:
@@ -290,7 +307,7 @@ You can use the helper script:
 
 Or run the assets directly with Bruin:
 ```
-bruin run pipeline/assets/cloud/*.py pipeline/assets/cloud/*.sql
+bruin run pipelines/cloud/assets/*.py pipelines/cloud/assets/*.sql
 ```
 
 What it does
@@ -299,35 +316,64 @@ What it does
 - Loads the raw layer into BigQuery
 - Runs staging and mart transformations in BigQuery
 
+### Validate results
+- Confirm that Parquet files were written to the configured GCS bucket
+- Confirm that raw, staging, and mart tables were created in BigQuery
+
 </details>
 
 <details>
+
+
+
 <summary>🔵 Cloud Mode (Bruin Cloud)</summary>
 
-Use this mode for scheduled execution.
+Use this mode for scheduled execution in the cloud.
+
+> [!IMPORTANT]
+> Before running this mode, provision the required cloud resources (GCS bucket and BigQuery dataset) and confirm that the GCP project ID, dataset, bucket name, and Bruin connection name match your environment.
 
 ### Requirements
 - Repository pushed to GitHub
 - Bruin Cloud project configured
-- Google Cloud credentials / connection configured in Bruin Cloud
-- Required cloud resources already provisioned
+- Google Cloud connection configured in Bruin Cloud
+- Required cloud resources provisioned
+  - GCS bucket
+  - BigQuery dataset
 
-### Typical setup flow
-- Push the repository to GitHub
-- Connect the repository in Bruin Cloud
-- Configure the required Google Cloud connection
-- Trigger a manual run to validate the setup
-- Enable the schedule
+### Setup flow
+1. Provision the cloud resources with Terraform  
+   See the [Terraform steps](#provision-cloud-resources) in **Cloud Mode (Local Execution)**
+2. Push the repository to GitHub
+3. Connect the repository in Bruin Cloud
+4. Configure the required Google Cloud connection
+5. Authenticate with Google Cloud using Application Default Credentials
+    See the [Authentication steps](#authenticate-with-google-cloud) in **Cloud Mode (Local Execution)**.
+6. Confirm that the connection name matches the one referenced by the cloud pipeline
+7. Trigger a manual run to validate the setup
+8. Enable the schedule
 
-The pipeline is designed to run daily and process the previous UTC day.
+### What it does
+- Runs the same cloud pipeline in a scheduled cloud environment
+- Processes the previous UTC day
+- Exports raw data to GCS
+- Loads and transforms data in BigQuery
+
+### Validate results
+- Confirm that the scheduled or manual run succeeds in Bruin Cloud
+- Confirm that Parquet files are written to the configured GCS bucket
+- Confirm that raw, staging, and mart tables are updated in BigQuery
 
 </details>
 
 ### Run the dashboard
+The dashboard reads from either DuckDB (local) or BigQuery (cloud), depending on the selected source.
+
 ```
 uv run streamlit run dashboard/streamlit_app.py
 ```
-The select the correct data source in the dashboard sidebar.
+
+Then select the correct data source in the dashboard sidebar.
 
 
 ## Selected Repos
