@@ -123,7 +123,6 @@ The project uses custom SQL checks across layers[^3]:
 - **Marts**: aggregation and business logic validation
 
 > [!IMPORTANT]
-
 > Some checks, such as enforcing `repo_name IS NOT NULL` in staging, were intentionally not used because the source data can legitimately contain nulls.
 
 
@@ -233,7 +232,6 @@ uv sync
 Use this mode when you want the fastest feedback loop for development, debugging, and dashboard work.
 
 > [!IMPORTANT]
-
 > The local pipeline should run without additional cloud configuration. If you changed default paths or connection names in your local Bruin configuration, update them before running.
 
 ### Run pipeline
@@ -267,7 +265,6 @@ What it does
 Use this mode when you want to test the cloud pipeline locally before scheduling it.
 
 > [!IMPORTANT]
-
 > Ensure that project-specific values (GCP project ID, dataset, bucket name) match your environment. Defaults are provided but may need to be updated.
 
 
@@ -335,7 +332,6 @@ What it does
 Use this mode for scheduled execution in the cloud.
 
 > [!IMPORTANT]
-
 > Before running this mode, provision the required cloud resources (GCS bucket and BigQuery dataset) and confirm that the GCP project ID, dataset, bucket name, and Bruin connection name match your environment.
 
 ### Requirements
@@ -446,18 +442,6 @@ The project focuses on a curated set of 15 data engineering / analytics reposito
 
 > [!NOTE]
 > This list can be changed. To analyze a different set of repositories, update the filtering logic in the asset that creates `stg_selected_events`.
-
-
-<!--
-## 🧪 Backfilling
-```
-bruin run \
-  --start-date 2026-03-25T00:00:00Z \
-  --end-date 2026-03-31T23:59:59Z \
-  pipeline/assets/cloud/*.py \
-  pipeline/assets/cloud/*.sql
-```
--->
 
 
 [^1]: `union_by_name` helps handle schema drift when reading multiple JSON files whose fields are not perfectly aligned. DuckDB aligns columns by name and fills missing values with nulls where needed.
