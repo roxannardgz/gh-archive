@@ -123,6 +123,7 @@ The project uses custom SQL checks across layers[^3]:
 - **Marts**: aggregation and business logic validation
 
 > [!IMPORTANT]
+
 > Some checks, such as enforcing `repo_name IS NOT NULL` in staging, were intentionally not used because the source data can legitimately contain nulls.
 
 
@@ -199,7 +200,7 @@ This keeps the infrastructure reproducible and reduces manual setup.
 A single Streamlit application supports both DuckDB (local) and BigQuery (cloud) as data sources. This avoids duplicating dashboard logic and ensures consistent metrics and visualizations across environments. It also enables seamless switching between local development and cloud data without modifying the UI layer.
 
 ## How to Reproduce
-By default, all pipeline runs process the previous UTC day. Check [here]() for how to backfill a custom date range.
+By default, all pipeline runs process the previous UTC day. Check [here](#backfilling-data) for how to backfill a custom date range.
 
 ### Requirements
 - Git
@@ -228,9 +229,11 @@ uv sync
 <details>
 
 <summary>🟡 Local Mode</summary>
+
 Use this mode when you want the fastest feedback loop for development, debugging, and dashboard work.
 
 > [!IMPORTANT]
+
 > The local pipeline should run without additional cloud configuration. If you changed default paths or connection names in your local Bruin configuration, update them before running.
 
 ### Run pipeline
@@ -264,6 +267,7 @@ What it does
 Use this mode when you want to test the cloud pipeline locally before scheduling it.
 
 > [!IMPORTANT]
+
 > Ensure that project-specific values (GCP project ID, dataset, bucket name) match your environment. Defaults are provided but may need to be updated.
 
 
@@ -331,6 +335,7 @@ What it does
 Use this mode for scheduled execution in the cloud.
 
 > [!IMPORTANT]
+
 > Before running this mode, provision the required cloud resources (GCS bucket and BigQuery dataset) and confirm that the GCP project ID, dataset, bucket name, and Bruin connection name match your environment.
 
 ### Requirements
@@ -375,6 +380,50 @@ uv run streamlit run dashboard/streamlit_app.py
 
 Then select the correct data source in the dashboard sidebar.
 
+
+## Backfilling data
+
+By default, all pipeline runs process the previous UTC day. You can run the pipeline for a custom date range using Bruin’s --start-date and --end-date parameters.
+
+Dates must be provided in UTC using ISO format.
+
+**🟡 Local Mode**
+``` bruin run \
+  --start-date 2026-03-25T00:00:00Z \
+  --end-date 2026-03-31T23:59:59Z \
+  pipelines/local/assets/*.py \
+  pipelines/local/assets/*.sql
+```
+
+What it does
+- Processes each day in the specified range
+- Updates the DuckDB tables
+- Maintains the rolling 7-day window (older local data may be removed)
+
+**🔵 Cloud Mode (Local Execution)**
+```
+bruin run \
+  --start-date 2026-03-25T00:00:00Z \
+  --end-date 2026-03-31T23:59:59Z \
+  pipelines/cloud/assets/*.py \
+  pipelines/cloud/assets/*.sql
+```
+
+**🔵 Cloud Mode (Bruin Cloud)**
+
+Backfilling in Bruin Cloud is done by triggering a manual run with a custom date range.
+
+Steps
+- Open the pipeline in Bruin Cloud
+- Trigger a manual run
+- Provide:
+    - start_date
+    - end_date
+
+Notes
+- Dates should be in UTC
+- The pipeline will process each day in the specified range
+- Existing partitions in BigQuery will be overwritten for those dates
 
 ## Selected Repos
 The project focuses on a curated set of 15 data engineering / analytics repositories:
