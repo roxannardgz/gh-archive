@@ -13,6 +13,10 @@
 
 
 ## Overview
+The [GH Archive dataset](https://www.gharchive.org/) provides large-scale GitHub event data. Analyzing this data is challenging due to the size, structure, and continuously growing nature, in addition to the nested structure and lack of pre-aggregated metrics.
+
+The challenge is to design a data pipeline that can efficiently ingest, transform, and analyze this data, while supporting both local development and cloud execution.
+
 This project builds a complete data workflow to analyze GitHub activity using the [GH Archive dataset](https://www.gharchive.org/). It ingests GitHub event data and transforms it into analytical tables, which are then visualized in an interactive Streamlit dashboard.
 
 The project includes two pipelines based on storage backend:
@@ -136,7 +140,7 @@ The Streamlit dashboard supports both data sources. It includes:
 - Top repos / top contributors
 - Repo filter (`All repos` or a specific repo)
 
-![Streamlit Dashboard](/images/strealmit-dashboard.png)
+![Streamlit Dashboard](/images/streamlit-dashboard.png)
 
 The dashboard reads from marts rather than raw tables to keep the UI logic simpler and the queries lighter.
 
@@ -225,16 +229,17 @@ source .venv/bin/activate
 uv sync
 ```
 
-<details>
+<hr>
+<hr>
 
-<summary>🟡 Local Mode</summary>
+### 🟡 Local Mode
 
 Use this mode when you want the fastest feedback loop for development, debugging, and dashboard work.
 
 > [!IMPORTANT]
 > The local pipeline should run without additional cloud configuration. If you changed default paths or connection names in your local Bruin configuration, update them before running.
 
-### Run pipeline
+#### Run pipeline
 You can use the helper script:
 ```
 ./scripts/run_local.sh
@@ -251,16 +256,14 @@ What it does
 - Builds staging and mart tables
 - Keeps a rolling 7-day local window
 
-### Validate results
+#### Validate results
 - A `gharchive.duckdb` file should be created/updated
 - Staging and mart tables should be available
 
-</details>
 
+<hr>
 
-<details>
-
-<summary>🔵 Cloud Mode (Local Execution)</summary>
+### 🔵 Cloud Mode (Local Execution)
 
 Use this mode when you want to test the cloud pipeline locally before scheduling it.
 
@@ -268,7 +271,7 @@ Use this mode when you want to test the cloud pipeline locally before scheduling
 > Ensure that project-specific values (GCP project ID, dataset, bucket name) match your environment. Defaults are provided but may need to be updated.
 
 
-### Requirements
+#### Requirements
 - Python environment set up with uv
 - GCP credentials configured
 - BigQuery access
@@ -277,7 +280,7 @@ Use this mode when you want to test the cloud pipeline locally before scheduling
     - GCS bucket
     - BigQuery dataset
 
-### Provision cloud resources
+#### Provision cloud resources
 Terraform is used to provision the main cloud resources for the project.
 
 Update `terraform.tfvars` with your GCP project ID and any required resource names.
@@ -290,7 +293,7 @@ terraform apply
 ```
 This creates the GCS bucket and BigQuery dataset used by the cloud pipeline.
 
-### Authenticate with Google Cloud
+#### Authenticate with Google Cloud
 
 The local cloud pipeline uses Application Default Credentials:
 ```
@@ -300,7 +303,7 @@ gcloud auth application-default set-quota-project <your-gcp-project-id>
 
 Review the cloud pipeline configuration and confirm that the project ID, dataset, bucket, and connection names match your environment.
 
-### Run the cloud pipeline locally
+#### Run the cloud pipeline locally
 You can use the helper script:
 ```
 ./scripts/run_cloud.sh
@@ -317,24 +320,20 @@ What it does
 - Loads the raw layer into BigQuery
 - Runs staging and mart transformations in BigQuery
 
-### Validate results
+#### Validate results
 - Confirm that Parquet files were written to the configured GCS bucket
 - Confirm that raw, staging, and mart tables were created in BigQuery
 
-</details>
+<hr>
 
-<details>
-
-
-
-<summary>🔵 Cloud Mode (Bruin Cloud)</summary>
+### 🔵 Cloud Mode (Bruin Cloud)
 
 Use this mode for scheduled execution in the cloud.
 
 > [!IMPORTANT]
 > Before running this mode, provision the required cloud resources (GCS bucket and BigQuery dataset) and confirm that the GCP project ID, dataset, bucket name, and Bruin connection name match your environment.
 
-### Requirements
+#### Requirements
 - Repository pushed to GitHub
 - Bruin Cloud project configured
 - Google Cloud connection configured in Bruin Cloud
@@ -342,7 +341,7 @@ Use this mode for scheduled execution in the cloud.
   - GCS bucket
   - BigQuery dataset
 
-### Setup flow
+#### Setup flow
 1. Provision the cloud resources with Terraform  
    See the [Terraform steps](#provision-cloud-resources) in **Cloud Mode (Local Execution)**
 2. Push the repository to GitHub
@@ -354,18 +353,19 @@ Use this mode for scheduled execution in the cloud.
 7. Trigger a manual run to validate the setup
 8. Enable the schedule
 
-### What it does
+#### What it does
 - Runs the same cloud pipeline in a scheduled cloud environment
 - Processes the previous UTC day
 - Exports raw data to GCS
 - Loads and transforms data in BigQuery
 
-### Validate results
+#### Validate results
 - Confirm that the scheduled or manual run succeeds in Bruin Cloud
 - Confirm that Parquet files are written to the configured GCS bucket
 - Confirm that raw, staging, and mart tables are updated in BigQuery
 
-</details>
+<hr>
+<hr>
 
 ### Run the dashboard
 The dashboard reads from either DuckDB (local) or BigQuery (cloud), depending on the selected source.
