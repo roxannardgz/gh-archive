@@ -75,7 +75,7 @@ Tables are:
 
 📍 See:
 - [pipelines/cloud/assets/*.sql](/pipelines/cloud/assets/)
-- [README.md](/README.md) → Architecture and Modeling Approach
+- [README.md](/README.md#architecture-and-modeling-approach) → Architecture and Modeling Approach
 
 
 ## 5. Transformations 
@@ -118,6 +118,7 @@ Supports both:
 📍 See:
 
 - [dashboard/streamlit_app.py](/dashboard/streamlit_app.py)
+- [README.md](/README.md#dashboard) → Dashboard
 
 
 ## 7. Reproducibility
