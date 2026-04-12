@@ -1,6 +1,6 @@
 # GH Archive Analytics Pipeline
-[Data Engineering Zoomcamp](https://datatalks.club/blog/data-engineering-zoomcamp.html) 2026 by *Data Talks Club*
- Final project.
+[Data Engineering Zoomcamp](https://datatalks.club/blog/data-engineering-zoomcamp.html) 2026 by *Data Talks Club* \
+Final project
 
 > [!TIP]
 > **Are you a peer reviewer?** See this [review guide](/peer-reviewers.md) for a structured overview of the project based on the evaluation criteria.
@@ -20,11 +20,11 @@
 
 
 ## Overview
-The [GH Archive dataset](https://www.gharchive.org/) provides large-scale GitHub event data. Analyzing this data is challenging due to the size, structure, and continuously growing nature, in addition to the nested structure and lack of pre-aggregated metrics.
+The [GH Archive dataset](https://www.gharchive.org/) provides large-scale GitHub event data that is difficult to analyze due to its volume, nested structure, and lack of pre-aggregated metrics.
 
-The challenge is to design a data pipeline that can efficiently ingest, transform, and analyze this data, while supporting both local development and cloud execution.
+The challenge is to design a data pipeline that can efficiently process this data while supporting both local development and cloud execution.
 
-This project builds a complete data workflow to analyze GitHub activity using the [GH Archive dataset](https://www.gharchive.org/). It ingests GitHub event data and transforms it into analytical tables, which are then visualized in an interactive Streamlit dashboard.
+This project implements an end-to-end data pipeline that transforms raw GitHub events into analytics-ready tables and delivers insights through an interactive Streamlit dashboard.
 
 The project includes two pipelines based on storage backend:
 
@@ -35,10 +35,7 @@ The project includes two pipelines based on storage backend:
 
 
 > [!NOTE]
-> The cloud pipeline supports both local execution (for development/testing) and cloud execution (for scheduled runs).
-
-> [!NOTE]
-> The project is designed to be reproducible in both local and cloud setups and to support the same analytical use case across both.
+> The cloud pipeline supports both local execution (for development and testing) and cloud execution (for scheduled runs). The project is designed to be reproducible across both environments while supporting the same analytical use case.
 
 
 \
@@ -82,8 +79,9 @@ Although similar, each execution mode has their own architecture. Both models fi
   - cleanup of old files outside the rolling window
 
 #### Data Storage
-- Local DuckDB database
 - Raw files stored in `data/raw/`
+- Local DuckDB database
+
 
 #### Data Model
 - Raw Layer
@@ -99,6 +97,8 @@ Although similar, each execution mode has their own architecture. Both models fi
 
 > [!NOTE]
 > The local pipeline intentionally keeps a fixed 7-day rolling window instead of storing the full history locally. This keeps local development faster, lighter, and aligned with the dashboard use case.
+
+<br>
 
 ### 🔵 Cloud Pipeline
 
@@ -134,9 +134,9 @@ The project uses custom SQL checks across layers[^3]:
 - **Marts**: aggregation and business logic validation
 
 > [!IMPORTANT]
-> Some checks, such as enforcing `repo_name IS NOT NULL` in staging, were intentionally not used because the source data can legitimately contain nulls.
+> Some checks, such as enforcing `repo_name IS NOT NULL` in staging, were intentionally not used because the source data can legitimately contain nulls. Built-in checks are only used in local mode.
 
-
+<br>
 
 ## Dashboard 
 The Streamlit dashboard supports both data sources. It includes:
@@ -151,6 +151,7 @@ The Streamlit dashboard supports both data sources. It includes:
 
 The dashboard reads from marts rather than raw tables to keep the UI logic simpler and the queries lighter.
 
+<br>
 
 ## Key Design Decision
 ### ▫️Two independent pipelines instead of one heavily parameterized pipeline
@@ -268,7 +269,7 @@ What it does
 - Staging and mart tables should be available
 
 
-Continue with the [dashboard](#run-the-dashboard)
+Continue with the [dashboard](#run-the-dashboard).
 
 ────────────
 
@@ -334,7 +335,7 @@ What it does
 - Confirm that raw, staging, and mart tables were created in BigQuery
 
 
-Continue with the [dashboard](#run-the-dashboard)
+Continue with the [dashboard](#run-the-dashboard).
 
 ────────────
 
@@ -377,7 +378,7 @@ Use this mode for scheduled execution in the cloud.
 - Confirm that raw, staging, and mart tables are updated in BigQuery
 
 
-Continue with the [dashboard](#run-the-dashboard)
+Continue with the [dashboard](#run-the-dashboard).
 
 ---
 
@@ -393,7 +394,7 @@ Then select the correct data source in the dashboard sidebar.
 
 ## Backfilling data
 
-By default, all pipeline runs process the previous UTC day. You can run the pipeline for a custom date range using Bruin’s --start-date and --end-date parameters.
+By default, all pipeline runs process the previous UTC day. You can run the pipeline for a custom date range using Bruin’s `--start-date` and `--end-date` parameters.
 
 Dates must be provided in UTC using ISO format.
 
