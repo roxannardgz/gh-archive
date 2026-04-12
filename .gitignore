@@ -1,11 +1,13 @@
-.venv
+.venv/
+
+.vscode/*
+!.vscode/mcp.json
 
 *.duckdb
 *.wal
 
 data/raw/*
 
-.bruin.yml
 logs/runs
 logs/*.log
 __pycache__/
